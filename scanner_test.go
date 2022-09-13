@@ -39,7 +39,7 @@ func TestScanTokens(t *testing.T) {
 			kinds = append(kinds, tok.Kind)
 		}
 		if !reflect.DeepEqual(kinds, test.expected) {
-			t.Fatalf("%v is not equal to %v", kinds, test.expected)
+			t.Fatalf("%#v is not equal to %#v", kinds, test.expected)
 		}
 	}
 }
