@@ -19,6 +19,8 @@ var scanTokensTests = []scanTokensTest{
 	{[]byte("\n"), []wall.TokenKind{wall.NEWLINE, wall.EOF}},
 	{[]byte("abc"), []wall.TokenKind{wall.IDENTIFIER, wall.EOF}},
 	{[]byte("123"), []wall.TokenKind{wall.INTEGER, wall.EOF}},
+	{[]byte("123*123"), []wall.TokenKind{wall.INTEGER, wall.STAR, wall.INTEGER, wall.EOF}},
+	{[]byte("-1"), []wall.TokenKind{wall.MINUS, wall.INTEGER, wall.EOF}},
 	{[]byte("0.0"), []wall.TokenKind{wall.FLOAT, wall.EOF}},
 	{[]byte("+"), []wall.TokenKind{wall.PLUS, wall.EOF}},
 	{[]byte("-"), []wall.TokenKind{wall.MINUS, wall.EOF}},
@@ -52,6 +54,7 @@ type scannerScanTest struct {
 
 var scannerScanTests = []scannerScanTest{
 	{[]byte("123"), wall.INTEGER, []byte("123")},
+	{[]byte("123*123"), wall.INTEGER, []byte("123")},
 	{[]byte("0.0"), wall.FLOAT, []byte("0.0")},
 	{[]byte("a"), wall.IDENTIFIER, []byte("a")},
 }

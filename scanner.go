@@ -104,20 +104,28 @@ func (s *Scanner) Scan() (Token, error) {
 	var t Token
 	switch c := s.next(); c {
 	case 0:
+		s.advance()
 		t = s.token(EOF)
 	case '\n':
+		s.advance()
 		t = s.token(NEWLINE)
 	case '+':
+		s.advance()
 		t = s.token(PLUS)
 	case '-':
+		s.advance()
 		t = s.token(MINUS)
 	case '*':
+		s.advance()
 		t = s.token(STAR)
 	case '/':
+		s.advance()
 		t = s.token(SLASH)
 	case '(':
+		s.advance()
 		t = s.token(LEFTPAREN)
 	case ')':
+		s.advance()
 		t = s.token(RIGHTPAREN)
 	default:
 		if isId(c) {
@@ -128,7 +136,6 @@ func (s *Scanner) Scan() (Token, error) {
 		}
 		return s.token(EOF), NewError(s.pos, "unexpected character: %c", c)
 	}
-	s.advance()
 	return t, nil
 }
 
@@ -190,8 +197,9 @@ func (s *Scanner) advance() byte {
 }
 
 func (s *Scanner) token(t TokenKind) Token {
-	end := mathutil.Clamp(s.end+1, 0, len(s.source))
+	end := mathutil.Clamp(s.end, 0, len(s.source))
 	content := s.source[s.start:end]
+	s.start = end
 	return Token{
 		Pos: Pos{
 			filename: s.pos.filename,

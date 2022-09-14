@@ -112,7 +112,7 @@ func (p *Parser) parsePrimary() (ExprNode, error) {
 			Operand:  operand,
 		}, nil
 	}
-	return nil, NewError(p.next().Pos, "expected primary expression, but got %s", p.next())
+	return nil, NewError(p.next().Pos, "expected primary expression, but got %s", p.next().Kind)
 }
 
 func (p *Parser) next() Token {

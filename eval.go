@@ -14,16 +14,16 @@ func NewEvaluator() Evaluator {
 
 func (e *Evaluator) EvaluateExpr(expr ExprNode) (EvalObject, error) {
 	switch ex := expr.(type) {
-	case UnaryExprNode:
+	case *UnaryExprNode:
 		return e.evaluateUnaryExpr(ex)
-	case BinaryExprNode:
+	case *BinaryExprNode:
 		return e.evaluateBinaryExpr(ex)
-	case LiteralExprNode:
+	case *LiteralExprNode:
 		return e.evaluateLiteralExpr(ex)
-	case GroupedExprNode:
+	case *GroupedExprNode:
 		return e.evaluateGroupedExpr(ex)
 	}
-	panic("unreachable")
+	panic(fmt.Sprintf("unreachable: %T", expr))
 }
 
 type EvalObject interface {
@@ -50,7 +50,7 @@ func (f FloatObject) String() string {
 	return fmt.Sprintf("%f", f.Value)
 }
 
-func (e *Evaluator) evaluateUnaryExpr(u UnaryExprNode) (EvalObject, error) {
+func (e *Evaluator) evaluateUnaryExpr(u *UnaryExprNode) (EvalObject, error) {
 	operand, err := e.EvaluateExpr(u.Operand)
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (e *Evaluator) evaluateUnaryExpr(u UnaryExprNode) (EvalObject, error) {
 	return nil, NewError(u.Operator.Pos, "operator %s is not implemented for %T", u.Operator.Kind, operand)
 }
 
-func (e *Evaluator) evaluateBinaryExpr(b BinaryExprNode) (EvalObject, error) {
+func (e *Evaluator) evaluateBinaryExpr(b *BinaryExprNode) (EvalObject, error) {
 	left, err := e.EvaluateExpr(b.Left)
 	if err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (e *Evaluator) evaluateBinaryExpr(b BinaryExprNode) (EvalObject, error) {
 	return nil, NewError(b.Op.Pos, "operator %s is not implemented for types %T and %T", b.Op.Kind, left, right)
 }
 
-func (e *Evaluator) evaluateLiteralExpr(b LiteralExprNode) (EvalObject, error) {
+func (e *Evaluator) evaluateLiteralExpr(b *LiteralExprNode) (EvalObject, error) {
 	switch b.Token.Kind {
 	case IDENTIFIER:
 		panic("unimplemented")
@@ -141,6 +141,6 @@ func (e *Evaluator) evaluateLiteralExpr(b LiteralExprNode) (EvalObject, error) {
 	panic("unreachable")
 }
 
-func (e *Evaluator) evaluateGroupedExpr(b GroupedExprNode) (EvalObject, error) {
+func (e *Evaluator) evaluateGroupedExpr(b *GroupedExprNode) (EvalObject, error) {
 	return e.EvaluateExpr(b.Inner)
 }
