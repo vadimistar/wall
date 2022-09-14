@@ -1,6 +1,7 @@
 package wall
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/cznic/mathutil"
@@ -20,6 +21,10 @@ const (
 	SLASH
 	LEFTPAREN
 	RIGHTPAREN
+	EQ
+
+	// keywords
+	VAR
 )
 
 func (t TokenKind) String() string {
@@ -46,6 +51,10 @@ func (t TokenKind) String() string {
 		return "("
 	case RIGHTPAREN:
 		return ")"
+	case EQ:
+		return "="
+	case VAR:
+		return "VAR"
 	}
 	panic("unreachable")
 }
@@ -101,6 +110,7 @@ func NewScanner(filename string, source []byte) Scanner {
 
 func (s *Scanner) Scan() (Token, error) {
 	s.skipWhitespace()
+	s.start = s.end
 	var t Token
 	switch c := s.next(); c {
 	case 0:
@@ -127,6 +137,9 @@ func (s *Scanner) Scan() (Token, error) {
 	case ')':
 		s.advance()
 		t = s.token(RIGHTPAREN)
+	case '=':
+		s.advance()
+		t = s.token(EQ)
 	default:
 		if isId(c) {
 			return s.id(), nil
@@ -155,7 +168,11 @@ func (s *Scanner) id() Token {
 		}
 		s.advance()
 	}
-	return s.token(IDENTIFIER)
+	t := s.token(IDENTIFIER)
+	if bytes.Equal(t.Content, []byte("var")) {
+		t.Kind = VAR
+	}
+	return t
 }
 
 func (s *Scanner) num() Token {

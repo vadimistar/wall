@@ -6,10 +6,24 @@ import (
 	"strconv"
 )
 
-type Evaluator struct{}
+type Evaluator struct {
+	vars map[string]EvalObject
+}
 
 func NewEvaluator() Evaluator {
-	return Evaluator{}
+	return Evaluator{
+		vars: make(map[string]EvalObject),
+	}
+}
+
+func (e *Evaluator) EvaluateStmt(stmt StmtNode) (EvalObject, error) {
+	switch st := stmt.(type) {
+	case *VarStmt:
+		return e.evaluateVarStmt(st)
+	case *ExprStmt:
+		return e.evaluateExprStmt(st)
+	}
+	panic(fmt.Sprintf("unreachable: %T", stmt))
 }
 
 func (e *Evaluator) EvaluateExpr(expr ExprNode) (EvalObject, error) {
@@ -31,6 +45,8 @@ type EvalObject interface {
 	String() string
 }
 
+type UnitObject struct{}
+
 type IntObject struct {
 	Value int64
 }
@@ -39,8 +55,13 @@ type FloatObject struct {
 	Value float64
 }
 
+func (u UnitObject) evalObject()  {}
 func (i IntObject) evalObject()   {}
 func (f FloatObject) evalObject() {}
+
+func (u UnitObject) String() string {
+	return "()"
+}
 
 func (i IntObject) String() string {
 	return fmt.Sprintf("%d", i.Value)
@@ -124,7 +145,10 @@ func (e *Evaluator) evaluateBinaryExpr(b *BinaryExprNode) (EvalObject, error) {
 func (e *Evaluator) evaluateLiteralExpr(b *LiteralExprNode) (EvalObject, error) {
 	switch b.Token.Kind {
 	case IDENTIFIER:
-		panic("unimplemented")
+		if val, ok := e.vars[string(b.Token.Content)]; ok {
+			return val, nil
+		}
+		return nil, NewError(b.Token.Pos, "undeclared name: %s", b.Token.Content)
 	case INTEGER:
 		val, err := strconv.ParseInt(string(b.Token.Content), 10, 64)
 		if err != nil {
@@ -143,4 +167,17 @@ func (e *Evaluator) evaluateLiteralExpr(b *LiteralExprNode) (EvalObject, error) 
 
 func (e *Evaluator) evaluateGroupedExpr(b *GroupedExprNode) (EvalObject, error) {
 	return e.EvaluateExpr(b.Inner)
+}
+
+func (e *Evaluator) evaluateVarStmt(stmt *VarStmt) (EvalObject, error) {
+	val, err := e.EvaluateExpr(stmt.Value)
+	if err != nil {
+		return nil, err
+	}
+	e.vars[string(stmt.Id.Content)] = val
+	return &UnitObject{}, nil
+}
+
+func (e *Evaluator) evaluateExprStmt(stmt *ExprStmt) (EvalObject, error) {
+	return e.EvaluateExpr(stmt.Expr)
 }

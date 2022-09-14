@@ -18,6 +18,50 @@ func NewParser(tokens []Token) Parser {
 	}
 }
 
+func (p *Parser) ParseStmt() (StmtNode, error) {
+	switch p.next().Kind {
+	case VAR:
+		varToken := p.advance()
+		id, err := p.match(IDENTIFIER)
+		if err != nil {
+			return nil, err
+		}
+		eq, err := p.match(EQ)
+		if err != nil {
+			return nil, err
+		}
+		val, err := p.ParseExpr()
+		if err != nil {
+			return nil, err
+		}
+		return &VarStmt{
+			Var:   varToken,
+			Id:    id,
+			Eq:    eq,
+			Value: val,
+		}, nil
+	}
+	expr, err := p.ParseExpr()
+	if err != nil {
+		return nil, err
+	}
+	return &ExprStmt{
+		Expr: expr,
+	}, nil
+}
+
+func (p *Parser) ParseStmtAndEof() (StmtNode, error) {
+	stmt, err := p.ParseStmt()
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.match(EOF)
+	if err != nil {
+		return nil, err
+	}
+	return stmt, nil
+}
+
 func (p *Parser) ParseExpr() (ExprNode, error) {
 	lhs, err := p.parsePrimary()
 	if err != nil {
@@ -31,9 +75,9 @@ func (p *Parser) ParseExprAndEof() (ExprNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err2 := p.match(EOF)
-	if err2 != nil {
-		return nil, err2
+	_, err = p.match(EOF)
+	if err != nil {
+		return nil, err
 	}
 	return expr, nil
 }
@@ -92,8 +136,8 @@ func (p *Parser) parsePrimary() (ExprNode, error) {
 		if err != nil {
 			return nil, err
 		}
-		right, err2 := p.match(RIGHTPAREN)
-		if err2 != nil {
+		right, err := p.match(RIGHTPAREN)
+		if err != nil {
 			return nil, err
 		}
 		return &GroupedExprNode{

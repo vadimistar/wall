@@ -91,6 +91,17 @@ func TestParseGroupedExpr(t *testing.T) {
 		t.Fatal(err)
 	}
 	if reflect.TypeOf(expr) != reflect.TypeOf(&wall.GroupedExprNode{}) {
-		t.Fatalf("expected binary expression, but got %#v", expr)
+		t.Fatalf("expected grouped expression, but got %#v", expr)
+	}
+}
+
+func TestParseVarStmt(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{{Kind: wall.VAR}, {Kind: wall.IDENTIFIER}, {Kind: wall.EQ}, {Kind: wall.INTEGER}})
+	stmt, err := pr.ParseStmtAndEof()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(stmt) != reflect.TypeOf(&wall.VarStmt{}) {
+		t.Fatalf("expected var statement, but got %#v", stmt)
 	}
 }

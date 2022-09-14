@@ -165,3 +165,32 @@ func TestEvalExpr(t *testing.T) {
 		}
 	}
 }
+
+func TestEvalVarStmt(t *testing.T) {
+	varStmt := &wall.VarStmt{
+		Var: wall.Token{},
+		Id:  wall.Token{Content: []byte("a")},
+		Eq:  wall.Token{},
+		Value: &wall.LiteralExprNode{
+			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
+		},
+	}
+	idExpr := &wall.LiteralExprNode{
+		Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+	}
+	ev := wall.NewEvaluator()
+	varRes, err := ev.EvaluateStmt(varStmt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(varRes) != reflect.TypeOf(&wall.UnitObject{}) {
+		t.Fatalf("var result is not an unit object: %T", varRes)
+	}
+	idRes, err := ev.EvaluateExpr(idExpr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(idRes) != reflect.TypeOf(&wall.IntObject{}) {
+		t.Fatalf("id result is not an int object: %T", idRes)
+	}
+}

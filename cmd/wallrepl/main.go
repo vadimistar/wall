@@ -11,6 +11,8 @@ func main() {
 	repl()
 }
 
+var eval = wall.NewEvaluator()
+
 func repl() {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("> ")
@@ -21,12 +23,11 @@ func repl() {
 		panic(err)
 	}
 	parser := wall.NewParser(tokens)
-	node, err2 := parser.ParseExprAndEof()
+	node, err2 := parser.ParseStmtAndEof()
 	if err2 != nil {
 		panic(err2)
 	}
-	eval := wall.NewEvaluator()
-	res, err3 := eval.EvaluateExpr(node)
+	res, err3 := eval.EvaluateStmt(node)
 	if err3 != nil {
 		panic(err3)
 	}
