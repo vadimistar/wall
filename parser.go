@@ -59,9 +59,9 @@ func (p *Parser) parseExpr(lhs ExprNode, minPrec int) (ExprNode, error) {
 			next = p.next()
 		}
 		lhs = &BinaryExprNode{
-			left:  lhs,
-			op:    op,
-			right: rhs,
+			Left:  lhs,
+			Op:    op,
+			Right: rhs,
 		}
 	}
 	return lhs, nil
@@ -97,9 +97,9 @@ func (p *Parser) parsePrimary() (ExprNode, error) {
 			return nil, err
 		}
 		return &GroupedExprNode{
-			left:  left,
-			inner: inner,
-			right: right,
+			Left:  left,
+			Inner: inner,
+			Right: right,
 		}, nil
 	case PLUS, MINUS:
 		operator := p.advance()
@@ -108,8 +108,8 @@ func (p *Parser) parsePrimary() (ExprNode, error) {
 			return nil, err
 		}
 		return &UnaryExprNode{
-			operator: operator,
-			operand:  operand,
+			Operator: operator,
+			Operand:  operand,
 		}, nil
 	}
 	return nil, NewError(p.next().Pos, "expected primary expression, but got %s", p.next())

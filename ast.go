@@ -10,20 +10,20 @@ type ExprNode interface {
 }
 
 type UnaryExprNode struct {
-	operator Token
-	operand  ExprNode
+	Operator Token
+	Operand  ExprNode
 }
 
 type BinaryExprNode struct {
-	left  ExprNode
-	op    Token
-	right ExprNode
+	Left  ExprNode
+	Op    Token
+	Right ExprNode
 }
 
 type GroupedExprNode struct {
-	left  Token
-	inner ExprNode
-	right Token
+	Left  Token
+	Inner ExprNode
+	Right Token
 }
 
 type LiteralExprNode struct {
@@ -31,13 +31,13 @@ type LiteralExprNode struct {
 }
 
 func (u UnaryExprNode) pos() Pos {
-	return u.operator.Pos
+	return u.Operator.Pos
 }
 func (b BinaryExprNode) pos() Pos {
-	return b.left.pos()
+	return b.Left.pos()
 }
 func (g GroupedExprNode) pos() Pos {
-	return g.left.Pos
+	return g.Left.Pos
 }
 func (l LiteralExprNode) pos() Pos {
 	return l.Token.Pos
