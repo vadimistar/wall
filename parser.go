@@ -91,8 +91,8 @@ func (p *Parser) parseExpr(lhs ExprNode, minPrec int) (ExprNode, error) {
 		}
 		next := p.next()
 		for (precedence(next.Kind) > precedence(op.Kind)) ||
-			(isRightAssoc(next.Kind) && (precedence(next.Kind) == precedence(op.Kind))) {
-			if isRightAssoc(next.Kind) {
+			(IsRightAssoc(next.Kind) && (precedence(next.Kind) == precedence(op.Kind))) {
+			if IsRightAssoc(next.Kind) {
 				rhs, err = p.parseExpr(rhs, precedence(op.Kind))
 			} else {
 				rhs, err = p.parseExpr(rhs, precedence(op.Kind)+1)
@@ -111,8 +111,8 @@ func (p *Parser) parseExpr(lhs ExprNode, minPrec int) (ExprNode, error) {
 	return lhs, nil
 }
 
-func isRightAssoc(t TokenKind) bool {
-	return false
+func IsRightAssoc(t TokenKind) bool {
+	return t == EQ
 }
 
 func precedence(t TokenKind) int {
@@ -121,6 +121,8 @@ func precedence(t TokenKind) int {
 		return 20
 	case PLUS, MINUS:
 		return 10
+	case EQ:
+		return 1
 	}
 	return -1
 }

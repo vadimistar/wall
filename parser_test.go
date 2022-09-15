@@ -68,18 +68,55 @@ func TestParseUnaryExpr(t *testing.T) {
 var binaryOps = []wall.Token{
 	{Kind: wall.PLUS},
 	{Kind: wall.MINUS},
+	{Kind: wall.EQ},
 }
 
 func TestParseBinaryExpr(t *testing.T) {
 	for _, op := range binaryOps {
-		t.Logf("testing %+v", op)
-		pr := wall.NewParser([]wall.Token{{Kind: wall.IDENTIFIER}, op, {Kind: wall.IDENTIFIER}, {Kind: wall.EOF}})
-		expr, err := pr.ParseExprAndEof()
+		t.Logf("testing %s", op.Kind)
+		pr := wall.NewParser([]wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("a")}, op, {Kind: wall.IDENTIFIER, Content: []byte("b")}, op, {Kind: wall.IDENTIFIER, Content: []byte("c")}, {Kind: wall.EOF}})
+		res, err := pr.ParseExprAndEof()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if reflect.TypeOf(expr) != reflect.TypeOf(&wall.BinaryExprNode{}) {
-			t.Fatalf("expected binary expression, but got %#v", expr)
+		if wall.IsRightAssoc(op.Kind) {
+			expected := &wall.BinaryExprNode{
+				Left: &wall.LiteralExprNode{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				},
+				Op: op,
+				Right: &wall.BinaryExprNode{
+					Left: &wall.LiteralExprNode{
+						Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+					},
+					Op: op,
+					Right: &wall.LiteralExprNode{
+						Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("c")},
+					},
+				},
+			}
+			if !reflect.DeepEqual(res, expected) {
+				t.Fatalf("expected %#v, but got %#v", expected, res)
+			}
+			return
+		}
+		expected := &wall.BinaryExprNode{
+			Left: &wall.BinaryExprNode{
+				Left: &wall.LiteralExprNode{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				},
+				Op: op,
+				Right: &wall.LiteralExprNode{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+				},
+			},
+			Op: op,
+			Right: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("c")},
+			},
+		}
+		if !reflect.DeepEqual(res, expected) {
+			t.Fatalf("expected %#v, but got %#v", expected, res)
 		}
 	}
 }
