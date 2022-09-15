@@ -4,6 +4,17 @@ type AstNode interface {
 	pos() Pos
 }
 
+type FileNode struct {
+	Defs []DefNode
+}
+
+func (f *FileNode) pos() Pos {
+	if len(f.Defs) == 0 {
+		return Pos{}
+	}
+	return f.Defs[0].pos()
+}
+
 type DefNode interface {
 	AstNode
 	defNode()
@@ -22,11 +33,20 @@ type FunParam struct {
 	Type TypeNode
 }
 
+type ImportDef struct {
+	Import Token
+	Name   Token
+}
+
 func (f *FunDef) pos() Pos {
 	return f.Fun.Pos
 }
+func (i *ImportDef) pos() Pos {
+	return i.Import.Pos
+}
 
-func (f *FunDef) defNode() {}
+func (f *FunDef) defNode()    {}
+func (i *ImportDef) defNode() {}
 
 type StmtNode interface {
 	AstNode

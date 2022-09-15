@@ -31,6 +31,7 @@ var scanTokensTests = []scanTokensTest{
 	{[]byte(","), []wall.TokenKind{wall.COMMA, wall.EOF}},
 	{[]byte("var"), []wall.TokenKind{wall.VAR, wall.EOF}},
 	{[]byte("fun"), []wall.TokenKind{wall.FUN, wall.EOF}},
+	{[]byte("import"), []wall.TokenKind{wall.IMPORT, wall.EOF}},
 }
 
 func TestScanTokens(t *testing.T) {

@@ -29,6 +29,7 @@ const (
 	// keywords
 	VAR
 	FUN
+	IMPORT
 )
 
 func (t TokenKind) String() string {
@@ -67,6 +68,8 @@ func (t TokenKind) String() string {
 		return "VAR"
 	case FUN:
 		return "FUN"
+	case IMPORT:
+		return "IMPORT"
 	}
 	panic("unreachable")
 }
@@ -195,6 +198,9 @@ func (s *Scanner) id() Token {
 	}
 	if bytes.Equal(t.Content, []byte("fun")) {
 		t.Kind = FUN
+	}
+	if bytes.Equal(t.Content, []byte("import")) {
+		t.Kind = IMPORT
 	}
 	return t
 }

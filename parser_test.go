@@ -278,3 +278,48 @@ func TestParseFunDef(t *testing.T) {
 		}
 	}
 }
+
+func TestParseImportDef(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{
+		{Kind: wall.IMPORT},
+		{Kind: wall.IDENTIFIER, Content: []byte("a")},
+	})
+	got, err := pr.ParseDefAndEof()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := &wall.ImportDef{
+		Import: wall.Token{Kind: wall.IMPORT},
+		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+	}
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("expected %#v, but got %#v", expected, got)
+	}
+}
+
+func TestParseFile(t *testing.T) {
+	tokens := []wall.Token{
+		{Kind: wall.IMPORT},
+		{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		{Kind: wall.NEWLINE},
+	}
+	tokens = append(tokens, parseFunDefTests[0].tokens...)
+	tokens = append(tokens, wall.Token{Kind: wall.NEWLINE})
+	pr := wall.NewParser(tokens)
+	got, err := pr.ParseFile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := &wall.FileNode{
+		Defs: []wall.DefNode{
+			&wall.ImportDef{
+				Import: wall.Token{Kind: wall.IMPORT},
+				Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+			},
+			parseFunDefTests[0].expected,
+		},
+	}
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("expected %#v, but got %#v", expected, got)
+	}
+}

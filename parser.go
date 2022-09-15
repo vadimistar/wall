@@ -18,6 +18,29 @@ func NewParser(tokens []Token) Parser {
 	}
 }
 
+func (p *Parser) ParseFile() (*FileNode, error) {
+	defs := make([]DefNode, 0)
+	for p.next().Kind != EOF {
+		if p.next().Kind == NEWLINE {
+			p.advance()
+			continue
+		}
+		def, err := p.ParseDef()
+		if err != nil {
+			return nil, err
+		}
+		defs = append(defs, def)
+		_, err = p.match(NEWLINE)
+		if err != nil {
+			return nil, err
+		}
+	}
+	_ = p.advance()
+	return &FileNode{
+		Defs: defs,
+	}, nil
+}
+
 func (p *Parser) ParseStmtOrDefAndEof() (AstNode, error) {
 	switch p.next().Kind {
 	case FUN:
@@ -57,6 +80,16 @@ func (p *Parser) ParseDef() (DefNode, error) {
 			ReturnType: returnType,
 			Body:       body,
 		}, err
+	case IMPORT:
+		kw := p.advance()
+		name, err := p.match(IDENTIFIER)
+		if err != nil {
+			return nil, err
+		}
+		return &ImportDef{
+			Import: kw,
+			Name:   name,
+		}, nil
 	}
 	return nil, NewError(p.next().Pos, "expected definition, but got %s", p.next().Kind)
 }
