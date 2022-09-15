@@ -91,6 +91,9 @@ func (e *Evaluator) evaluateUnaryExpr(u *UnaryExprNode) (EvalObject, error) {
 }
 
 func (e *Evaluator) evaluateBinaryExpr(b *BinaryExprNode) (EvalObject, error) {
+	if b.Op.Kind == EQ {
+		return e.evaluateAssignExpr(b)
+	}
 	left, err := e.EvaluateExpr(b.Left)
 	if err != nil {
 		return nil, err
@@ -140,6 +143,26 @@ func (e *Evaluator) evaluateBinaryExpr(b *BinaryExprNode) (EvalObject, error) {
 		}
 	}
 	return nil, NewError(b.Op.Pos, "operator %s is not implemented for types %T and %T", b.Op.Kind, left, right)
+}
+
+func (e *Evaluator) evaluateAssignExpr(b *BinaryExprNode) (EvalObject, error) {
+	if reflect.TypeOf(b.Left) != reflect.TypeOf(&LiteralExprNode{}) {
+		return nil, NewError(b.Left.pos(), "can't assign not to id")
+	}
+	left := b.Left.(*LiteralExprNode)
+	if left.Token.Kind != IDENTIFIER {
+		return nil, NewError(b.Left.pos(), "can't assign not to id: %s", left.Token.Content)
+	}
+	id := string(left.Token.Content)
+	right, err := e.EvaluateExpr(b.Right)
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := e.vars[id]; ok {
+		e.vars[id] = right
+		return right, nil
+	}
+	return nil, NewError(left.pos(), "not declared: %s", id)
 }
 
 func (e *Evaluator) evaluateLiteralExpr(b *LiteralExprNode) (EvalObject, error) {

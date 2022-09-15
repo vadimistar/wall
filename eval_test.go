@@ -183,14 +183,59 @@ func TestEvalVarStmt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reflect.TypeOf(varRes) != reflect.TypeOf(&wall.UnitObject{}) {
-		t.Fatalf("var result is not an unit object: %T", varRes)
+	if !reflect.DeepEqual(varRes, &wall.UnitObject{}) {
+		t.Fatalf("expected %#v, but got %#v", &wall.UnitObject{}, varRes)
 	}
 	idRes, err := ev.EvaluateExpr(idExpr)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reflect.TypeOf(idRes) != reflect.TypeOf(&wall.IntObject{}) {
-		t.Fatalf("id result is not an int object: %T", idRes)
+	if !reflect.DeepEqual(idRes, &wall.IntObject{Value: 10}) {
+		t.Fatalf("expected %#v, but got %#v", &wall.IntObject{Value: 10}, varRes)
+	}
+}
+
+func TestEvalAssignExpr(t *testing.T) {
+	varStmt := &wall.VarStmt{
+		Var: wall.Token{},
+		Id:  wall.Token{Content: []byte("a")},
+		Eq:  wall.Token{},
+		Value: &wall.LiteralExprNode{
+			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+		},
+	}
+	assignExpr := &wall.BinaryExprNode{
+		Left: &wall.LiteralExprNode{
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		},
+		Op: wall.Token{Kind: wall.EQ},
+		Right: &wall.LiteralExprNode{
+			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("20")},
+		},
+	}
+	idExpr := &wall.LiteralExprNode{
+		Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+	}
+	ev := wall.NewEvaluator()
+	varRes, err := ev.EvaluateStmt(varStmt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(varRes, &wall.UnitObject{}) {
+		t.Fatalf("expected %#v, but got %#v", &wall.UnitObject{}, varRes)
+	}
+	assignRes, err := ev.EvaluateExpr(assignExpr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(assignRes, &wall.IntObject{Value: 20}) {
+		t.Fatalf("expected %#v, but got %#v", &wall.IntObject{Value: 20}, assignRes)
+	}
+	idRes, err := ev.EvaluateExpr(idExpr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(assignRes, &wall.IntObject{Value: 20}) {
+		t.Fatalf("expected %#v, but got %#v", &wall.IntObject{Value: 20}, idRes)
 	}
 }
