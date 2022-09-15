@@ -43,11 +43,11 @@ func repl() {
 			panic(err)
 		}
 		parser := wall.NewParser(tokens)
-		node, err2 := parser.ParseStmtAndEof()
+		node, err2 := parser.ParseStmtOrDefAndEof()
 		if err2 != nil {
 			panic(err2)
 		}
-		res, err3 := eval.EvaluateStmt(node)
+		res, err3 := eval.EvaluateNode(node)
 		if err3 != nil {
 			panic(err3)
 		}

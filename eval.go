@@ -26,6 +26,18 @@ func NewEvaluator() Evaluator {
 	}
 }
 
+func (e *Evaluator) EvaluateNode(node AstNode) (EvalObject, error) {
+	switch nd := node.(type) {
+	case StmtNode:
+		return e.EvaluateStmt(nd)
+	case ExprNode:
+		return e.EvaluateExpr(nd)
+	case DefNode:
+		return e.EvaluateDef(nd)
+	}
+	panic(fmt.Sprintf("unreachable: %T", node))
+}
+
 func (e *Evaluator) EvaluateStmt(stmt StmtNode) (EvalObject, error) {
 	switch st := stmt.(type) {
 	case *VarStmt:
@@ -52,6 +64,14 @@ func (e *Evaluator) EvaluateExpr(expr ExprNode) (EvalObject, error) {
 	panic(fmt.Sprintf("unreachable: %T", expr))
 }
 
+func (e *Evaluator) EvaluateDef(def DefNode) (EvalObject, error) {
+	switch df := def.(type) {
+	case *FunDef:
+		return e.evaluateFunDef(df)
+	}
+	panic(fmt.Sprintf("unreachable: %T", def))
+}
+
 type EvalObject interface {
 	evalObject()
 	String() string
@@ -67,20 +87,27 @@ type FloatObject struct {
 	Value float64
 }
 
+type FunObject struct {
+	Arity int
+	Node  *FunDef
+}
+
 func (u UnitObject) evalObject()  {}
 func (i IntObject) evalObject()   {}
 func (f FloatObject) evalObject() {}
+func (f FunObject) evalObject()   {}
 
-func (u UnitObject) String() string {
+func (u *UnitObject) String() string {
 	return "()"
 }
-
-func (i IntObject) String() string {
+func (i *IntObject) String() string {
 	return fmt.Sprintf("%d", i.Value)
 }
-
-func (f FloatObject) String() string {
+func (f *FloatObject) String() string {
 	return fmt.Sprintf("%f", f.Value)
+}
+func (f *FunObject) String() string {
+	return fmt.Sprintf("<function arity:%d node:%x>", f.Arity, &f.Node)
 }
 
 func (e *Evaluator) evaluateUnaryExpr(u *UnaryExprNode) (EvalObject, error) {
@@ -263,4 +290,57 @@ func (e *Evaluator) pushScope() {
 
 func (e *Evaluator) popScope() {
 	e.scopes = e.scopes[:len(e.scopes)-1]
+}
+
+func (e *Evaluator) evaluateFunDef(f *FunDef) (EvalObject, error) {
+	arity := len(f.Params)
+	obj := &FunObject{
+		Arity: arity,
+		Node:  f,
+	}
+	// checking the syntax of the body
+	e.pushScope()
+	for _, param := range f.Params {
+		defaultVal, err := e.defaultValue(param.Type)
+		if err != nil {
+			return nil, err
+		}
+		e.declareVar(string(param.Id.Content), defaultVal)
+	}
+	var returnType reflect.Type
+	if f.ReturnType != nil {
+		returnTypeDefault, err := e.defaultValue(f.ReturnType)
+		if err != nil {
+			return nil, err
+		}
+		returnType = reflect.TypeOf(returnTypeDefault)
+	} else {
+		returnType = reflect.TypeOf(&UnitObject{})
+	}
+	bodyResult, err := e.EvaluateStmt(f.Body)
+	if err != nil {
+		return nil, err
+	}
+	if reflect.TypeOf(bodyResult) != returnType {
+		return nil, NewError(f.ReturnType.pos(), "expected return type %s, but got %s", returnType, reflect.TypeOf(bodyResult))
+	}
+	e.popScope()
+	e.declareVar(string(f.Id.Content), obj)
+	return obj, nil
+}
+
+func (e *Evaluator) defaultValue(t TypeNode) (EvalObject, error) {
+	switch tt := t.(type) {
+	case *IdTypeNode:
+		switch string(tt.Token.Content) {
+		case "int":
+			return &IntObject{}, nil
+		case "float":
+			return &FloatObject{}, nil
+		case "unit":
+			return &UnitObject{}, nil
+		}
+		return nil, NewError(t.pos(), "undeclared type: %s", tt.Token.Content)
+	}
+	panic(fmt.Sprintf("unreachable: %T", t))
 }

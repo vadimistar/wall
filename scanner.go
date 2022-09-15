@@ -24,9 +24,11 @@ const (
 	LEFTBRACE
 	RIGHTBRACE
 	EQ
+	COMMA
 
 	// keywords
 	VAR
+	FUN
 )
 
 func (t TokenKind) String() string {
@@ -59,8 +61,12 @@ func (t TokenKind) String() string {
 		return "}"
 	case EQ:
 		return "="
+	case COMMA:
+		return ","
 	case VAR:
 		return "VAR"
+	case FUN:
+		return "FUN"
 	}
 	panic("unreachable")
 }
@@ -152,6 +158,9 @@ func (s *Scanner) Scan() (Token, error) {
 	case '=':
 		s.advance()
 		t = s.token(EQ)
+	case ',':
+		s.advance()
+		t = s.token(COMMA)
 	default:
 		if isId(c) {
 			return s.id(), nil
@@ -183,6 +192,9 @@ func (s *Scanner) id() Token {
 	t := s.token(IDENTIFIER)
 	if bytes.Equal(t.Content, []byte("var")) {
 		t.Kind = VAR
+	}
+	if bytes.Equal(t.Content, []byte("fun")) {
+		t.Kind = FUN
 	}
 	return t
 }

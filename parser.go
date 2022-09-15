@@ -18,6 +18,61 @@ func NewParser(tokens []Token) Parser {
 	}
 }
 
+func (p *Parser) ParseStmtOrDefAndEof() (AstNode, error) {
+	switch p.next().Kind {
+	case FUN:
+		return p.ParseDefAndEof()
+	default:
+		return p.ParseStmtAndEof()
+	}
+}
+
+func (p *Parser) ParseDef() (DefNode, error) {
+	switch p.next().Kind {
+	case FUN:
+		fun := p.advance()
+		id, err := p.match(IDENTIFIER)
+		if err != nil {
+			return nil, err
+		}
+		params, err := p.parseFunParams()
+		if err != nil {
+			return nil, err
+		}
+		var returnType TypeNode = nil
+		if p.next().Kind != LEFTBRACE {
+			returnType, err = p.parseType()
+			if err != nil {
+				return nil, err
+			}
+		}
+		body, err := p.ParseStmt()
+		if err != nil {
+			return nil, err
+		}
+		return &FunDef{
+			Fun:        fun,
+			Id:         id,
+			Params:     params,
+			ReturnType: returnType,
+			Body:       body,
+		}, err
+	}
+	return nil, NewError(p.next().Pos, "expected definition, but got %s", p.next().Kind)
+}
+
+func (p *Parser) ParseDefAndEof() (DefNode, error) {
+	def, err := p.ParseDef()
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.match(EOF)
+	if err != nil {
+		return nil, err
+	}
+	return def, nil
+}
+
 func (p *Parser) ParseStmt() (StmtNode, error) {
 	switch p.next().Kind {
 	case VAR:
@@ -205,4 +260,50 @@ func (p *Parser) match(k TokenKind) (Token, error) {
 	}
 	p.index++
 	return t, nil
+}
+
+func (p *Parser) parseFunParams() (params []FunParam, err error) {
+	params = make([]FunParam, 0)
+	_, err = p.match(LEFTPAREN)
+	if err != nil {
+		return params, err
+	}
+	for p.next().Kind != RIGHTPAREN {
+		id, err := p.match(IDENTIFIER)
+		if err != nil {
+			return nil, err
+		}
+		typ, err := p.parseType()
+		if err != nil {
+			return params, err
+		}
+		params = append(params, FunParam{
+			Id:   id,
+			Type: typ,
+		})
+		if p.next().Kind == RIGHTPAREN {
+			continue
+		}
+		if p.next().Kind == COMMA {
+			p.advance()
+			continue
+		}
+		return params, NewError(p.next().Pos, "expected ')' or ',', but got %s", p.next().Kind)
+	}
+	_, err = p.match(RIGHTPAREN)
+	if err != nil {
+		return params, err
+	}
+	return params, nil
+}
+
+func (p *Parser) parseType() (TypeNode, error) {
+	switch p.next().Kind {
+	case IDENTIFIER:
+		tok := p.advance()
+		return &IdTypeNode{
+			Token: tok,
+		}, nil
+	}
+	return nil, NewError(p.next().Pos, "expected type, but got %s", p.next().Kind)
 }

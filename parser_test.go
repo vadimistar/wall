@@ -164,3 +164,117 @@ func TestParseBlockStmt(t *testing.T) {
 		t.Fatalf("expected %#v, but got %#v", expected, got)
 	}
 }
+
+type parseFunDefTest struct {
+	tokens   []wall.Token
+	expected wall.DefNode
+}
+
+var parseFunDefTests = []parseFunDefTest{
+	{[]wall.Token{
+		{Kind: wall.FUN},
+		{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		{Kind: wall.LEFTPAREN},
+		{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.COMMA},
+		{Kind: wall.IDENTIFIER, Content: []byte("b")},
+		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.RIGHTPAREN},
+		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.LEFTBRACE},
+		{Kind: wall.RIGHTBRACE},
+	}, &wall.FunDef{
+		Fun: wall.Token{Kind: wall.FUN},
+		Id:  wall.Token{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		Params: []wall.FunParam{
+			{
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Type: &wall.IdTypeNode{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+				},
+			},
+			{
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+				Type: &wall.IdTypeNode{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+				},
+			},
+		},
+		ReturnType: &wall.IdTypeNode{
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		},
+		Body: &wall.BlockStmt{
+			Left:  wall.Token{Kind: wall.LEFTBRACE},
+			Stmts: []wall.StmtNode{},
+			Right: wall.Token{Kind: wall.RIGHTBRACE},
+		},
+	}},
+	{[]wall.Token{
+		{Kind: wall.FUN},
+		{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		{Kind: wall.LEFTPAREN},
+		{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.COMMA},
+		{Kind: wall.IDENTIFIER, Content: []byte("b")},
+		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.RIGHTPAREN},
+		{Kind: wall.LEFTBRACE},
+		{Kind: wall.RIGHTBRACE},
+	}, &wall.FunDef{
+		Fun: wall.Token{Kind: wall.FUN},
+		Id:  wall.Token{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		Params: []wall.FunParam{
+			{
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Type: &wall.IdTypeNode{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+				},
+			},
+			{
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+				Type: &wall.IdTypeNode{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+				},
+			},
+		},
+		ReturnType: nil,
+		Body: &wall.BlockStmt{
+			Left:  wall.Token{Kind: wall.LEFTBRACE},
+			Stmts: []wall.StmtNode{},
+			Right: wall.Token{Kind: wall.RIGHTBRACE},
+		},
+	}},
+	{[]wall.Token{
+		{Kind: wall.FUN},
+		{Kind: wall.IDENTIFIER, Content: []byte("main")},
+		{Kind: wall.LEFTPAREN},
+		{Kind: wall.RIGHTPAREN},
+		{Kind: wall.LEFTBRACE},
+		{Kind: wall.RIGHTBRACE},
+	}, &wall.FunDef{
+		Fun:        wall.Token{Kind: wall.FUN},
+		Id:         wall.Token{Kind: wall.IDENTIFIER, Content: []byte("main")},
+		Params:     []wall.FunParam{},
+		ReturnType: nil,
+		Body: &wall.BlockStmt{
+			Left:  wall.Token{Kind: wall.LEFTBRACE},
+			Stmts: []wall.StmtNode{},
+			Right: wall.Token{Kind: wall.RIGHTBRACE},
+		},
+	}},
+}
+
+func TestParseFunDef(t *testing.T) {
+	for _, test := range parseFunDefTests {
+		pr := wall.NewParser(test.tokens)
+		got, err := pr.ParseDefAndEof()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, test.expected) {
+			t.Fatalf("expected %#v, but got %#v", test.expected, got)
+		}
+	}
+}

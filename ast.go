@@ -4,6 +4,30 @@ type AstNode interface {
 	pos() Pos
 }
 
+type DefNode interface {
+	AstNode
+	defNode()
+}
+
+type FunDef struct {
+	Fun        Token
+	Id         Token
+	Params     []FunParam
+	ReturnType TypeNode
+	Body       StmtNode
+}
+
+type FunParam struct {
+	Id   Token
+	Type TypeNode
+}
+
+func (f *FunDef) pos() Pos {
+	return f.Fun.Pos
+}
+
+func (f *FunDef) defNode() {}
+
 type StmtNode interface {
 	AstNode
 	stmtNode()
@@ -83,3 +107,18 @@ func (u UnaryExprNode) exprNode()   {}
 func (b BinaryExprNode) exprNode()  {}
 func (g GroupedExprNode) exprNode() {}
 func (l LiteralExprNode) exprNode() {}
+
+type TypeNode interface {
+	AstNode
+	typeNode()
+}
+
+type IdTypeNode struct {
+	Token
+}
+
+func (i *IdTypeNode) pos() Pos {
+	return i.Token.Pos
+}
+
+func (i *IdTypeNode) typeNode() {}
