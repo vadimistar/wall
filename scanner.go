@@ -60,12 +60,12 @@ func (t TokenKind) String() string {
 }
 
 type Pos struct {
-	filename string
-	line     uint
+	Filename string
+	Line     uint
 }
 
 func (p Pos) String() string {
-	return fmt.Sprintf("%s:%d", p.filename, p.line)
+	return fmt.Sprintf("%s:%d", p.Filename, p.Line)
 }
 
 type Token struct {
@@ -101,8 +101,8 @@ func NewScanner(filename string, source []byte) Scanner {
 	const DEFAULT_LINE uint = 1
 	return Scanner{
 		pos: Pos{
-			filename: filename,
-			line:     DEFAULT_LINE,
+			Filename: filename,
+			Line:     DEFAULT_LINE,
 		},
 		source: source,
 	}
@@ -216,11 +216,10 @@ func (s *Scanner) advance() byte {
 func (s *Scanner) token(t TokenKind) Token {
 	end := mathutil.Clamp(s.end, 0, len(s.source))
 	content := s.source[s.start:end]
-	s.start = end
 	return Token{
 		Pos: Pos{
-			filename: s.pos.filename,
-			line:     s.pos.line,
+			Filename: s.pos.Filename,
+			Line:     s.pos.Line,
 		},
 		Kind:    t,
 		Content: content,
