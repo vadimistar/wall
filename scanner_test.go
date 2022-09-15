@@ -27,6 +27,7 @@ var scanTokensTests = []scanTokensTest{
 	{[]byte("*"), []wall.TokenKind{wall.STAR, wall.EOF}},
 	{[]byte("/"), []wall.TokenKind{wall.SLASH, wall.EOF}},
 	{[]byte("()"), []wall.TokenKind{wall.LEFTPAREN, wall.RIGHTPAREN, wall.EOF}},
+	{[]byte("{}"), []wall.TokenKind{wall.LEFTBRACE, wall.RIGHTBRACE, wall.EOF}},
 	{[]byte("var"), []wall.TokenKind{wall.VAR, wall.EOF}},
 }
 

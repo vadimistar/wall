@@ -40,6 +40,30 @@ func (p *Parser) ParseStmt() (StmtNode, error) {
 			Eq:    eq,
 			Value: val,
 		}, nil
+	case LEFTBRACE:
+		left := p.advance()
+		stmts := make([]StmtNode, 0)
+		for p.next().Kind != RIGHTBRACE {
+			if p.next().Kind == NEWLINE {
+				p.advance()
+				continue
+			}
+			stmt, err := p.ParseStmt()
+			if err != nil {
+				return nil, err
+			}
+			stmts = append(stmts, stmt)
+			_, err = p.match(NEWLINE)
+			if err != nil {
+				return nil, err
+			}
+		}
+		right := p.advance()
+		return &BlockStmt{
+			Left:  left,
+			Stmts: stmts,
+			Right: right,
+		}, nil
 	}
 	expr, err := p.ParseExpr()
 	if err != nil {

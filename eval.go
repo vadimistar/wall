@@ -7,12 +7,22 @@ import (
 )
 
 type Evaluator struct {
+	scopes []scope
+}
+
+type scope struct {
 	vars map[string]EvalObject
+}
+
+func newScope() scope {
+	return scope{
+		vars: map[string]EvalObject{},
+	}
 }
 
 func NewEvaluator() Evaluator {
 	return Evaluator{
-		vars: make(map[string]EvalObject),
+		scopes: append(make([]scope, 0), newScope()),
 	}
 }
 
@@ -22,6 +32,8 @@ func (e *Evaluator) EvaluateStmt(stmt StmtNode) (EvalObject, error) {
 		return e.evaluateVarStmt(st)
 	case *ExprStmt:
 		return e.evaluateExprStmt(st)
+	case *BlockStmt:
+		return e.evaluateBlockStmt(st)
 	}
 	panic(fmt.Sprintf("unreachable: %T", stmt))
 }
@@ -158,8 +170,8 @@ func (e *Evaluator) evaluateAssignExpr(b *BinaryExprNode) (EvalObject, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := e.vars[id]; ok {
-		e.vars[id] = right
+	if _, ok := e.lookupVar(id); ok {
+		e.assignToVar(id, right)
 		return right, nil
 	}
 	return nil, NewError(left.pos(), "not declared: %s", id)
@@ -168,7 +180,7 @@ func (e *Evaluator) evaluateAssignExpr(b *BinaryExprNode) (EvalObject, error) {
 func (e *Evaluator) evaluateLiteralExpr(b *LiteralExprNode) (EvalObject, error) {
 	switch b.Token.Kind {
 	case IDENTIFIER:
-		if val, ok := e.vars[string(b.Token.Content)]; ok {
+		if val, ok := e.lookupVar(string(b.Token.Content)); ok {
 			return val, nil
 		}
 		return nil, NewError(b.Token.Pos, "undeclared name: %s", b.Token.Content)
@@ -197,10 +209,58 @@ func (e *Evaluator) evaluateVarStmt(stmt *VarStmt) (EvalObject, error) {
 	if err != nil {
 		return nil, err
 	}
-	e.vars[string(stmt.Id.Content)] = val
+	e.declareVar(string(stmt.Id.Content), val)
 	return &UnitObject{}, nil
 }
 
 func (e *Evaluator) evaluateExprStmt(stmt *ExprStmt) (EvalObject, error) {
 	return e.EvaluateExpr(stmt.Expr)
+}
+
+func (e *Evaluator) evaluateBlockStmt(block *BlockStmt) (EvalObject, error) {
+	if len(block.Stmts) == 0 {
+		return &UnitObject{}, nil
+	}
+	e.pushScope()
+	var res EvalObject
+	for i, stmtNode := range block.Stmts {
+		stmt, err := e.EvaluateStmt(stmtNode)
+		if err != nil {
+			return nil, err
+		}
+		if i == len(block.Stmts)-1 {
+			res = stmt
+		}
+	}
+	e.popScope()
+	return res, nil
+}
+
+func (e *Evaluator) lookupVar(id string) (EvalObject, bool) {
+	for i := len(e.scopes) - 1; i >= 0; i-- {
+		if obj, ok := e.scopes[i].vars[id]; ok {
+			return obj, true
+		}
+	}
+	return nil, false
+}
+
+func (e *Evaluator) assignToVar(id string, val EvalObject) {
+	for i := len(e.scopes) - 1; i >= 0; i-- {
+		if _, ok := e.scopes[i].vars[id]; ok {
+			e.scopes[i].vars[id] = val
+		}
+	}
+}
+
+func (e *Evaluator) declareVar(id string, val EvalObject) {
+	e.scopes[len(e.scopes)-1].vars[id] = val
+}
+
+func (e *Evaluator) pushScope() {
+	e.scopes = append(e.scopes, newScope())
+}
+
+func (e *Evaluator) popScope() {
+	e.scopes = e.scopes[:len(e.scopes)-1]
 }

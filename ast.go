@@ -20,15 +20,25 @@ type ExprStmt struct {
 	Expr ExprNode
 }
 
-func (v VarStmt) pos() Pos {
-	return v.Id.Pos
-}
-func (e ExprStmt) pos() Pos {
-	return e.Expr.pos()
+type BlockStmt struct {
+	Left  Token
+	Stmts []StmtNode
+	Right Token
 }
 
-func (v VarStmt) stmtNode()  {}
-func (e ExprStmt) stmtNode() {}
+func (v *VarStmt) pos() Pos {
+	return v.Id.Pos
+}
+func (e *ExprStmt) pos() Pos {
+	return e.Expr.pos()
+}
+func (b *BlockStmt) pos() Pos {
+	return b.Left.Pos
+}
+
+func (v *VarStmt) stmtNode()   {}
+func (e *ExprStmt) stmtNode()  {}
+func (b *BlockStmt) stmtNode() {}
 
 type ExprNode interface {
 	AstNode

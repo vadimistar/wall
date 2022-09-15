@@ -21,6 +21,8 @@ const (
 	SLASH
 	LEFTPAREN
 	RIGHTPAREN
+	LEFTBRACE
+	RIGHTBRACE
 	EQ
 
 	// keywords
@@ -51,6 +53,10 @@ func (t TokenKind) String() string {
 		return "("
 	case RIGHTPAREN:
 		return ")"
+	case LEFTBRACE:
+		return "{"
+	case RIGHTBRACE:
+		return "}"
 	case EQ:
 		return "="
 	case VAR:
@@ -137,6 +143,12 @@ func (s *Scanner) Scan() (Token, error) {
 	case ')':
 		s.advance()
 		t = s.token(RIGHTPAREN)
+	case '{':
+		s.advance()
+		t = s.token(LEFTBRACE)
+	case '}':
+		s.advance()
+		t = s.token(RIGHTBRACE)
 	case '=':
 		s.advance()
 		t = s.token(EQ)

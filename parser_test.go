@@ -142,3 +142,25 @@ func TestParseVarStmt(t *testing.T) {
 		t.Fatalf("expected var statement, but got %#v", stmt)
 	}
 }
+
+func TestParseBlockStmt(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{{Kind: wall.LEFTBRACE}, {Kind: wall.NEWLINE}, {Kind: wall.IDENTIFIER}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE}})
+	got, err := pr.ParseStmtAndEof()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := &wall.BlockStmt{
+		Left: wall.Token{Kind: wall.LEFTBRACE},
+		Stmts: []wall.StmtNode{
+			&wall.ExprStmt{
+				Expr: &wall.LiteralExprNode{
+					Token: wall.Token{Kind: wall.IDENTIFIER},
+				},
+			},
+		},
+		Right: wall.Token{Kind: wall.RIGHTBRACE},
+	}
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("expected %#v, but got %#v", expected, got)
+	}
+}
