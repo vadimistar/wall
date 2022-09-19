@@ -83,7 +83,7 @@ func TestNamedNodeFromFile(t *testing.T) {
 	if A != nameNode {
 		log.Fatalf("expected the same instance of 'A', but got another one")
 	}
-	if len(parsedFiles) != 2 {
+	if len(parsedFiles) != 3 {
 		log.Fatalf("expected 2 parsed files, but parsed %d", len(parsedFiles))
 	}
 }
