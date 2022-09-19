@@ -1,5 +1,14 @@
 package wall
 
+func ParseFile(filename string, source []byte) (*FileNode, error) {
+	tokens, err := ScanTokens(filename, source)
+	if err != nil {
+		return nil, err
+	}
+	psr := NewParser(tokens)
+	return psr.ParseFile()
+}
+
 type Parser struct {
 	tokens []Token
 	index  int
