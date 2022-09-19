@@ -297,6 +297,46 @@ func TestParseImportDef(t *testing.T) {
 	}
 }
 
+func TestParseStructDef(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{
+		{Kind: wall.STRUCT},
+		{Kind: wall.IDENTIFIER, Content: []byte("Employee")},
+		{Kind: wall.LEFTBRACE},
+		{Kind: wall.IDENTIFIER, Content: []byte("id")},
+		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.COMMA},
+		{Kind: wall.IDENTIFIER, Content: []byte("age")},
+		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.NEWLINE},
+		{Kind: wall.RIGHTBRACE},
+	})
+	got, err := pr.ParseDefAndEof()
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := &wall.StructDef{
+		Struct: wall.Token{Kind: wall.STRUCT},
+		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("Employee")},
+		Fields: []wall.StructField{
+			{
+				Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("id")},
+				Type: &wall.IdTypeNode{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+				},
+			},
+			{
+				Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("age")},
+				Type: &wall.IdTypeNode{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(got, expected) {
+		t.Fatalf("expected %#v, but got %#v", expected, got)
+	}
+}
+
 func TestParseFile(t *testing.T) {
 	tokens := []wall.Token{
 		{Kind: wall.IMPORT},

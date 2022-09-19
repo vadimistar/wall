@@ -38,15 +38,30 @@ type ImportDef struct {
 	Name   Token
 }
 
+type StructDef struct {
+	Struct Token
+	Name   Token
+	Fields []StructField
+}
+
+type StructField struct {
+	Name Token
+	Type TypeNode
+}
+
 func (f *FunDef) pos() Pos {
 	return f.Fun.Pos
 }
 func (i *ImportDef) pos() Pos {
 	return i.Import.Pos
 }
+func (s *StructDef) pos() Pos {
+	return s.Struct.Pos
+}
 
 func (f *FunDef) defNode()    {}
 func (i *ImportDef) defNode() {}
+func (s *StructDef) defNode() {}
 
 type StmtNode interface {
 	AstNode

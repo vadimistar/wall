@@ -52,7 +52,7 @@ func (p *Parser) ParseFile() (*FileNode, error) {
 
 func (p *Parser) ParseStmtOrDefAndEof() (AstNode, error) {
 	switch p.next().Kind {
-	case FUN:
+	case FUN, IMPORT, STRUCT:
 		return p.ParseDefAndEof()
 	default:
 		return p.ParseStmtAndEof()
@@ -98,6 +98,21 @@ func (p *Parser) ParseDef() (DefNode, error) {
 		return &ImportDef{
 			Import: kw,
 			Name:   name,
+		}, nil
+	case STRUCT:
+		kw := p.advance()
+		name, err := p.match(IDENTIFIER)
+		if err != nil {
+			return nil, err
+		}
+		fields, err := p.parseStructBody()
+		if err != nil {
+			return nil, err
+		}
+		return &StructDef{
+			Struct: kw,
+			Name:   name,
+			Fields: fields,
 		}, nil
 	}
 	return nil, NewError(p.next().Pos, "expected definition, but got %s", p.next().Kind)
@@ -348,4 +363,43 @@ func (p *Parser) parseType() (TypeNode, error) {
 		}, nil
 	}
 	return nil, NewError(p.next().Pos, "expected type, but got %s", p.next().Kind)
+}
+
+func (p *Parser) parseStructBody() (fields []StructField, err error) {
+	_, err = p.match(LEFTBRACE)
+	if err != nil {
+		return fields, err
+	}
+	fields = make([]StructField, 0)
+	for p.next().Kind != RIGHTBRACE {
+		if p.next().Kind == NEWLINE {
+			p.advance()
+			continue
+		}
+		name, err := p.match(IDENTIFIER)
+		if err != nil {
+			return fields, err
+		}
+		typ, err := p.parseType()
+		if err != nil {
+			return fields, err
+		}
+		fields = append(fields, StructField{
+			Name: name,
+			Type: typ,
+		})
+		if p.next().Kind == COMMA || p.next().Kind == NEWLINE {
+			p.advance()
+			continue
+		}
+		if p.next().Kind == RIGHTBRACE {
+			break
+		}
+		return fields, NewError(p.next().Pos, "expected comma, newline or }, but got %s", p.next().Kind)
+	}
+	_, err = p.match(RIGHTBRACE)
+	if err != nil {
+		return nil, err
+	}
+	return fields, nil
 }
