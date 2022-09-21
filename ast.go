@@ -38,6 +38,11 @@ type ImportDef struct {
 	Name   Token
 }
 
+type ParsedImportDef struct {
+	ImportDef
+	ParsedNode *FileNode
+}
+
 type StructDef struct {
 	Struct Token
 	Name   Token
@@ -55,13 +60,17 @@ func (f *FunDef) pos() Pos {
 func (i *ImportDef) pos() Pos {
 	return i.Import.Pos
 }
+func (p *ParsedImportDef) pos() Pos {
+	return p.Import.Pos
+}
 func (s *StructDef) pos() Pos {
 	return s.Struct.Pos
 }
 
-func (f *FunDef) defNode()    {}
-func (i *ImportDef) defNode() {}
-func (s *StructDef) defNode() {}
+func (f *FunDef) defNode()          {}
+func (i *ImportDef) defNode()       {}
+func (p *ParsedImportDef) defNode() {}
+func (s *StructDef) defNode()       {}
 
 type StmtNode interface {
 	AstNode

@@ -1,9 +1,12 @@
 package wall_test
 
 import (
+	"os"
 	"reflect"
 	"testing"
 	"wall"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type parseLiteralExprTest struct {
@@ -362,4 +365,26 @@ func TestParseFile(t *testing.T) {
 	if !reflect.DeepEqual(got, expected) {
 		t.Fatalf("expected %#v, but got %#v", expected, got)
 	}
+}
+
+func TestParseCompilationUnit(t *testing.T) {
+	if err := os.WriteFile("B.wl", []byte("import C\nfun b() {}\n"), 0666); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("C.wl", []byte("import A\nfun c() {}\n"), 0666); err != nil {
+		t.Fatal(err)
+	}
+	A, err := wall.ParseCompilationUnit("A.wl", []byte("import B\nfun a() {}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = A.Defs[1].(*wall.FunDef)
+	importB := A.Defs[0].(*wall.ParsedImportDef)
+	B := importB.ParsedNode
+	_ = B.Defs[1].(*wall.FunDef)
+	importC := B.Defs[0].(*wall.ParsedImportDef)
+	C := importC.ParsedNode
+	_ = C.Defs[1].(*wall.FunDef)
+	importA := C.Defs[0].(*wall.ParsedImportDef)
+	assert.Equal(t, importA.ParsedNode, A)
 }

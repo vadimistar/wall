@@ -1,5 +1,11 @@
 package wall
 
+import (
+	"errors"
+	"os"
+	"path/filepath"
+)
+
 func ParseFile(filename string, source []byte) (*FileNode, error) {
 	tokens, err := ScanTokens(filename, source)
 	if err != nil {
@@ -25,6 +31,67 @@ func NewParser(tokens []Token) Parser {
 		tokens: tokens,
 		index:  0,
 	}
+}
+
+func ParseCompilationUnit(filename string, source []byte) (*FileNode, error) {
+	file, err := ParseFile(filename, source)
+	if err != nil {
+		return nil, err
+	}
+	if err := resolveImports(file, make(map[string]*FileNode)); err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
+func resolveImports(file *FileNode, parsedModules map[string]*FileNode) error {
+	for i, def := range file.Defs {
+		switch importDef := def.(type) {
+		case *ImportDef:
+			resolvedImport, err := resolveImport(importDef, parsedModules)
+			if err != nil {
+				return err
+			}
+			file.Defs[i] = resolvedImport
+		}
+	}
+	return nil
+}
+
+func resolveImport(def *ImportDef, parsedModules map[string]*FileNode) (*ParsedImportDef, error) {
+	importedFilename := filepath.Join(filepath.Dir(def.Import.Filename), toModuleFilename(string(def.Name.Content)))
+	absImportedFilename, err := filepath.Abs(importedFilename)
+	if err != nil {
+		return nil, err
+	}
+	if module, ok := parsedModules[absImportedFilename]; ok {
+		return &ParsedImportDef{
+			ImportDef:  *def,
+			ParsedNode: module,
+		}, nil
+	}
+	source, err := os.ReadFile(importedFilename)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, NewError(def.pos(), "unresolved import: %s (not found at %s)", def.Name.Content, importedFilename)
+		}
+		return nil, err
+	}
+	parsedFile, err := ParseFile(importedFilename, source)
+	if err != nil {
+		return nil, err
+	}
+	parsedModules[absImportedFilename] = parsedFile
+	resolveImports(parsedFile, parsedModules)
+	return &ParsedImportDef{
+		ImportDef:  *def,
+		ParsedNode: parsedFile,
+	}, nil
+}
+
+func toModuleFilename(name string) string {
+	const WALL_EXTENSION = ".wl"
+	return name + WALL_EXTENSION
 }
 
 func (p *Parser) ParseFile() (*FileNode, error) {
