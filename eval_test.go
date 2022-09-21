@@ -1,10 +1,10 @@
 package wall_test
 
 import (
-	"log"
-	"reflect"
 	"testing"
 	"wall"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type evalExprTest struct {
@@ -157,12 +157,8 @@ func TestEvalExpr(t *testing.T) {
 		t.Logf("testing %#v", test.node)
 		ev := wall.NewEvaluator()
 		res, err := ev.EvaluateExpr(test.node)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if !reflect.DeepEqual(res, test.result) {
-			log.Fatalf("expected result %#v, but got %#v", test.result, res)
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, res, test.result)
 	}
 }
 
@@ -180,19 +176,11 @@ func TestEvalVarStmt(t *testing.T) {
 	}
 	ev := wall.NewEvaluator()
 	varRes, err := ev.EvaluateStmt(varStmt)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(varRes, &wall.UnitObject{}) {
-		t.Fatalf("expected %#v, but got %#v", &wall.UnitObject{}, varRes)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, varRes, &wall.UnitObject{})
 	idRes, err := ev.EvaluateExpr(idExpr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(idRes, &wall.IntObject{Value: 10}) {
-		t.Fatalf("expected %#v, but got %#v", &wall.IntObject{Value: 10}, varRes)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, idRes, &wall.IntObject{Value: 10})
 }
 
 func TestEvalAssignExpr(t *testing.T) {
@@ -218,24 +206,12 @@ func TestEvalAssignExpr(t *testing.T) {
 	}
 	ev := wall.NewEvaluator()
 	varRes, err := ev.EvaluateStmt(varStmt)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(varRes, &wall.UnitObject{}) {
-		t.Fatalf("expected %#v, but got %#v", &wall.UnitObject{}, varRes)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, varRes, &wall.UnitObject{})
 	assignRes, err := ev.EvaluateExpr(assignExpr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(assignRes, &wall.IntObject{Value: 20}) {
-		t.Fatalf("expected %#v, but got %#v", &wall.IntObject{Value: 20}, assignRes)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, assignRes, &wall.IntObject{Value: 20})
 	idRes, err := ev.EvaluateExpr(idExpr)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(assignRes, &wall.IntObject{Value: 20}) {
-		t.Fatalf("expected %#v, but got %#v", &wall.IntObject{Value: 20}, idRes)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, idRes, &wall.IntObject{Value: 20})
 }

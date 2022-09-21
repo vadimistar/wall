@@ -40,12 +40,8 @@ func TestParseLiteralExpr(t *testing.T) {
 		t.Logf("testing %#v", test.tokens)
 		p := wall.NewParser(test.tokens)
 		e, err := p.ParseExprAndEof()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(e, &test.expected) {
-			t.Fatalf("expression %#v is not equal to %#v", e, &test.expected)
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, e, &test.expected)
 	}
 }
 
@@ -59,12 +55,8 @@ func TestParseUnaryExpr(t *testing.T) {
 		t.Logf("testing %+v", op)
 		pr := wall.NewParser([]wall.Token{op, {Kind: wall.IDENTIFIER}, {Kind: wall.EOF}})
 		expr, err := pr.ParseExprAndEof()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if reflect.TypeOf(expr) != reflect.TypeOf(&wall.UnaryExprNode{}) {
-			t.Fatalf("expected unary expression, but got %#v", expr)
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, reflect.TypeOf(expr), reflect.TypeOf(&wall.UnaryExprNode{}))
 	}
 }
 
@@ -79,9 +71,7 @@ func TestParseBinaryExpr(t *testing.T) {
 		t.Logf("testing %s", op.Kind)
 		pr := wall.NewParser([]wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("a")}, op, {Kind: wall.IDENTIFIER, Content: []byte("b")}, op, {Kind: wall.IDENTIFIER, Content: []byte("c")}, {Kind: wall.EOF}})
 		res, err := pr.ParseExprAndEof()
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, err)
 		if wall.IsRightAssoc(op.Kind) {
 			expected := &wall.BinaryExprNode{
 				Left: &wall.LiteralExprNode{
@@ -98,9 +88,7 @@ func TestParseBinaryExpr(t *testing.T) {
 					},
 				},
 			}
-			if !reflect.DeepEqual(res, expected) {
-				t.Fatalf("expected %#v, but got %#v", expected, res)
-			}
+			assert.Equal(t, res, expected)
 			return
 		}
 		expected := &wall.BinaryExprNode{
@@ -118,40 +106,34 @@ func TestParseBinaryExpr(t *testing.T) {
 				Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("c")},
 			},
 		}
-		if !reflect.DeepEqual(res, expected) {
-			t.Fatalf("expected %#v, but got %#v", expected, res)
-		}
+		assert.Equal(t, res, expected)
 	}
 }
 
 func TestParseGroupedExpr(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{{Kind: wall.LEFTPAREN}, {Kind: wall.IDENTIFIER}, {Kind: wall.RIGHTPAREN}})
 	expr, err := pr.ParseExprAndEof()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reflect.TypeOf(expr) != reflect.TypeOf(&wall.GroupedExprNode{}) {
-		t.Fatalf("expected grouped expression, but got %#v", expr)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, expr, &wall.GroupedExprNode{
+		Left: wall.Token{Kind: wall.LEFTPAREN},
+		Inner: &wall.LiteralExprNode{
+			Token: wall.Token{Kind: wall.IDENTIFIER},
+		},
+		Right: wall.Token{Kind: wall.RIGHTPAREN},
+	})
 }
 
 func TestParseVarStmt(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{{Kind: wall.VAR}, {Kind: wall.IDENTIFIER}, {Kind: wall.EQ}, {Kind: wall.INTEGER}})
 	stmt, err := pr.ParseStmtAndEof()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reflect.TypeOf(stmt) != reflect.TypeOf(&wall.VarStmt{}) {
-		t.Fatalf("expected var statement, but got %#v", stmt)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, reflect.TypeOf(stmt), reflect.TypeOf(&wall.VarStmt{}))
 }
 
 func TestParseBlockStmt(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{{Kind: wall.LEFTBRACE}, {Kind: wall.NEWLINE}, {Kind: wall.IDENTIFIER}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE}})
 	got, err := pr.ParseStmtAndEof()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	expected := &wall.BlockStmt{
 		Left: wall.Token{Kind: wall.LEFTBRACE},
 		Stmts: []wall.StmtNode{
@@ -163,9 +145,7 @@ func TestParseBlockStmt(t *testing.T) {
 		},
 		Right: wall.Token{Kind: wall.RIGHTBRACE},
 	}
-	if !reflect.DeepEqual(got, expected) {
-		t.Fatalf("expected %#v, but got %#v", expected, got)
-	}
+	assert.Equal(t, got, expected)
 }
 
 type parseFunDefTest struct {
@@ -273,12 +253,8 @@ func TestParseFunDef(t *testing.T) {
 	for _, test := range parseFunDefTests {
 		pr := wall.NewParser(test.tokens)
 		got, err := pr.ParseDefAndEof()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(got, test.expected) {
-			t.Fatalf("expected %#v, but got %#v", test.expected, got)
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, got, test.expected)
 	}
 }
 
@@ -288,16 +264,12 @@ func TestParseImportDef(t *testing.T) {
 		{Kind: wall.IDENTIFIER, Content: []byte("a")},
 	})
 	got, err := pr.ParseDefAndEof()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	expected := &wall.ImportDef{
 		Import: wall.Token{Kind: wall.IMPORT},
 		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
 	}
-	if !reflect.DeepEqual(got, expected) {
-		t.Fatalf("expected %#v, but got %#v", expected, got)
-	}
+	assert.Equal(t, got, expected)
 }
 
 func TestParseStructDef(t *testing.T) {
@@ -314,9 +286,7 @@ func TestParseStructDef(t *testing.T) {
 		{Kind: wall.RIGHTBRACE},
 	})
 	got, err := pr.ParseDefAndEof()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	expected := &wall.StructDef{
 		Struct: wall.Token{Kind: wall.STRUCT},
 		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("Employee")},
@@ -335,9 +305,7 @@ func TestParseStructDef(t *testing.T) {
 			},
 		},
 	}
-	if !reflect.DeepEqual(got, expected) {
-		t.Fatalf("expected %#v, but got %#v", expected, got)
-	}
+	assert.Equal(t, got, expected)
 }
 
 func TestParseFile(t *testing.T) {
@@ -350,9 +318,7 @@ func TestParseFile(t *testing.T) {
 	tokens = append(tokens, wall.Token{Kind: wall.NEWLINE})
 	pr := wall.NewParser(tokens)
 	got, err := pr.ParseFile()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	expected := &wall.FileNode{
 		Defs: []wall.DefNode{
 			&wall.ImportDef{
@@ -362,9 +328,7 @@ func TestParseFile(t *testing.T) {
 			parseFunDefTests[0].expected,
 		},
 	}
-	if !reflect.DeepEqual(got, expected) {
-		t.Fatalf("expected %#v, but got %#v", expected, got)
-	}
+	assert.Equal(t, got, expected)
 }
 
 func TestParseCompilationUnit(t *testing.T) {

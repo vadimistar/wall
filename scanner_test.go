@@ -1,9 +1,10 @@
 package wall_test
 
 import (
-	"reflect"
 	"testing"
 	"wall"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type scanTokensTest struct {
@@ -39,16 +40,12 @@ func TestScanTokens(t *testing.T) {
 	for _, test := range scanTokensTests {
 		t.Logf("running test '%s'", test.source)
 		tokens, err := wall.ScanTokens("<test>", test.source)
-		if err != nil {
-			t.Fatal(err)
-		}
+		assert.NoError(t, err)
 		kinds := []wall.TokenKind{}
 		for _, tok := range tokens {
 			kinds = append(kinds, tok.Kind)
 		}
-		if !reflect.DeepEqual(kinds, test.expected) {
-			t.Fatalf("%#v is not equal to %#v", kinds, test.expected)
-		}
+		assert.Equal(t, kinds, test.expected)
 	}
 }
 
@@ -70,14 +67,8 @@ func TestScanner_Scan(t *testing.T) {
 		t.Logf("running test '%s'", test.source)
 		sc := wall.NewScanner("<test>", test.source)
 		tok, err := sc.Scan()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if tok.Kind != test.kind {
-			t.Errorf("token kind %s is not equal to %s", tok.Kind, test.kind)
-		}
-		if !reflect.DeepEqual(tok.Content, test.content) {
-			t.Errorf("token content %s is not equal to %s", tok.Content, test.content)
-		}
+		assert.NoError(t, err)
+		assert.Equal(t, tok.Kind, test.kind)
+		assert.Equal(t, tok.Content, test.content)
 	}
 }
