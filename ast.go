@@ -18,6 +18,7 @@ func (f *FileNode) pos() Pos {
 type DefNode interface {
 	AstNode
 	defNode()
+	id() []byte
 }
 
 type FunDef struct {
@@ -71,6 +72,19 @@ func (f *FunDef) defNode()          {}
 func (i *ImportDef) defNode()       {}
 func (p *ParsedImportDef) defNode() {}
 func (s *StructDef) defNode()       {}
+
+func (f *FunDef) id() []byte {
+	return f.Id.Content
+}
+func (i *ImportDef) id() []byte {
+	return i.Name.Content
+}
+func (p *ParsedImportDef) id() []byte {
+	return p.Name.Content
+}
+func (s *StructDef) id() []byte {
+	return s.Name.Content
+}
 
 type StmtNode interface {
 	AstNode
