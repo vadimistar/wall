@@ -332,6 +332,9 @@ func TestParseFile(t *testing.T) {
 }
 
 func TestParseCompilationUnit(t *testing.T) {
+	if err := os.WriteFile("A.wl", []byte("import B\nfun a() {}\n"), 0666); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile("B.wl", []byte("import C\nfun b() {}\n"), 0666); err != nil {
 		t.Fatal(err)
 	}

@@ -1,7 +1,6 @@
 package wall
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 )
@@ -72,17 +71,16 @@ func resolveImport(def *ImportDef, parsedModules map[string]*FileNode) (*ParsedI
 	}
 	source, err := os.ReadFile(importedFilename)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, NewError(def.pos(), "unresolved import: %s (not found at %s)", def.Name.Content, importedFilename)
-		}
-		return nil, err
+		return nil, NewError(def.pos(), "unresolved import: %s (%s)", def.Name.Content, err)
 	}
 	parsedFile, err := ParseFile(importedFilename, source)
 	if err != nil {
 		return nil, err
 	}
 	parsedModules[absImportedFilename] = parsedFile
-	resolveImports(parsedFile, parsedModules)
+	if err := resolveImports(parsedFile, parsedModules); err != nil {
+		return nil, err
+	}
 	return &ParsedImportDef{
 		ImportDef:  *def,
 		ParsedNode: parsedFile,
