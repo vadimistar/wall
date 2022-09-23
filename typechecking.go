@@ -114,6 +114,43 @@ func checkFunctionsSignatures(f *FileNode, m *Module, checkedNodes map[*FileNode
 	return nil
 }
 
+func CheckTypesContents(f *FileNode, m *Module) error {
+	return checkTypesContents(f, m, make(map[*FileNode]struct{}))
+}
+
+func checkTypesContents(f *FileNode, m *Module, checkedNodes map[*FileNode]struct{}) error {
+	if _, checked := checkedNodes[f]; checked {
+		return nil
+	}
+	checkedNodes[f] = struct{}{}
+	for _, def := range f.Defs {
+		switch df := def.(type) {
+		case *ParsedImportDef:
+			checkTypesSignatures(df.ParsedNode, m.GlobalScope.Import(string(df.id())), checkedNodes)
+		case *StructDef:
+			fields := make(map[string]TypeId)
+			for _, field := range df.Fields {
+				if _, exists := fields[string(field.Name.Content)]; exists {
+					return NewError(field.Name.Pos, "field is redeclared: %s", field.Name.Content)
+				}
+				typeId, err := checkType(field.Type, m)
+				if err != nil {
+					return err
+				}
+				fields[string(field.Name.Content)] = typeId
+			}
+			_, id := m.GlobalScope.Type(string(df.id()))
+			switch t := m.Types[id].(type) {
+			case *StructType:
+				t.Fields = fields
+			default:
+				panic("unreachable")
+			}
+		}
+	}
+	return nil
+}
+
 func checkType(node TypeNode, module *Module) (TypeId, error) {
 	switch nd := node.(type) {
 	case *IdTypeNode:

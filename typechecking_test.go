@@ -129,3 +129,39 @@ func TestCheckFunctionsSignatures(t *testing.T) {
 		}))
 	}
 }
+
+func TestCheckTypesContents(t *testing.T) {
+	file := &wall.FileNode{
+		Defs: []wall.DefNode{
+			&wall.StructDef{
+				Name: wall.Token{Content: []byte("Employee")},
+				Fields: []wall.StructField{
+					{
+						Name: wall.Token{Content: []byte("name")},
+						Type: &wall.IdTypeNode{
+							Token: wall.Token{Content: []byte("String")},
+						},
+					},
+					{
+						Name: wall.Token{Content: []byte("age")},
+						Type: &wall.IdTypeNode{
+							Token: wall.Token{Content: []byte("int")},
+						},
+					},
+				},
+			},
+		},
+	}
+	mod := wall.NewModule()
+	employeeTypeId := mod.DefType("Employee", wall.NewStructType())
+	stringTypeId := mod.DefType("String", wall.NewStructType())
+	intTypeId := mod.DefType("int", wall.NewStructType())
+	assert.NoError(t, wall.CheckTypesContents(file, mod))
+	if assert.IsType(t, mod.Types[employeeTypeId], &wall.StructType{}) {
+		emp := mod.Types[employeeTypeId].(*wall.StructType)
+		assert.Equal(t, emp.Fields, map[string]wall.TypeId{
+			"name": stringTypeId,
+			"age":  intTypeId,
+		})
+	}
+}
