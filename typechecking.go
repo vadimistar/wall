@@ -1,5 +1,7 @@
 package wall
 
+import "reflect"
+
 func CheckForDuplications(f *FileNode) error {
 	notypes := make(map[string]struct{}, 0)
 	types := make(map[string]struct{}, 0)
@@ -49,7 +51,7 @@ func importCheckingLoop(f *FileNode, m *Module, checkedModules map[*FileNode]*Mo
 			} else {
 				module = NewModule()
 			}
-			_ = m.AddImport(string(def.id()), module)
+			_ = m.DefImport(string(def.id()), module)
 			checkImports(importDef.ParsedNode, module, checkedModules)
 		}
 	}
@@ -69,9 +71,59 @@ func checkTypesSignatures(f *FileNode, m *Module, checkedNodes map[*FileNode]str
 		case *ParsedImportDef:
 			checkTypesSignatures(df.ParsedNode, m.GlobalScope.Import(string(df.id())), checkedNodes)
 		case *StructDef:
-			_ = m.AddType(string(df.id()), NewStructType())
+			_ = m.DefType(string(df.id()), NewStructType())
 		}
 	}
+}
+
+func CheckFunctionsSignatures(f *FileNode, m *Module) error {
+	return checkFunctionsSignatures(f, m, make(map[*FileNode]struct{}))
+}
+
+func checkFunctionsSignatures(f *FileNode, m *Module, checkedNodes map[*FileNode]struct{}) error {
+	if _, checked := checkedNodes[f]; checked {
+		return nil
+	}
+	checkedNodes[f] = struct{}{}
+	for _, def := range f.Defs {
+		switch df := def.(type) {
+		case *ParsedImportDef:
+			checkTypesSignatures(df.ParsedNode, m.GlobalScope.Import(string(df.id())), checkedNodes)
+		case *FunDef:
+			var argsTypes []TypeId
+			for _, param := range df.Params {
+				typeId, err := checkType(param.Type, m)
+				if err != nil {
+					return err
+				}
+				argsTypes = append(argsTypes, typeId)
+			}
+			var returnType TypeId
+			if df.ReturnType != nil {
+				var err error
+				returnType, err = checkType(df.ReturnType, m)
+				if err != nil {
+					return err
+				}
+			} else {
+				returnType = m.UnitTypeId()
+			}
+			m.GlobalScope.DefFun(string(df.id()), argsTypes, returnType)
+		}
+	}
+	return nil
+}
+
+func checkType(node TypeNode, module *Module) (TypeId, error) {
+	switch nd := node.(type) {
+	case *IdTypeNode:
+		typ, id := module.GlobalScope.Type(string(nd.Content))
+		if typ == nil {
+			return -1, NewError(nd.pos(), "undeclared type: %s", nd.Content)
+		}
+		return id, nil
+	}
+	panic("unreachable")
 }
 
 type Type interface {
@@ -79,22 +131,22 @@ type Type interface {
 }
 
 type PointerType struct {
-	To Type
+	To TypeId
 }
 
 type StructType struct {
-	Fields map[string]Type
+	Fields map[string]TypeId
 }
 
 func NewStructType() *StructType {
 	return &StructType{
-		Fields: make(map[string]Type),
+		Fields: make(map[string]TypeId),
 	}
 }
 
 type FunctionType struct {
-	Args    []Type
-	Returns Type
+	Args    []TypeId
+	Returns TypeId
 }
 
 type ExternType struct {
@@ -126,18 +178,33 @@ func NewModule() *Module {
 	return m
 }
 
-func (m *Module) AddImport(name string, module *Module) ImportId {
+func (m *Module) DefImport(name string, module *Module) ImportId {
 	id := ImportId(len(m.Imports))
 	m.Imports = append(m.Imports, module)
 	m.GlobalScope.Imports[name] = id
 	return id
 }
 
-func (m *Module) AddType(name string, typ Type) TypeId {
+func (m *Module) DefType(name string, typ Type) TypeId {
 	id := TypeId(len(m.Types))
 	m.Types = append(m.Types, typ)
 	m.GlobalScope.Types[name] = id
 	return id
+}
+
+func (m *Module) TypeId(typ Type) TypeId {
+	for id, t := range m.Types {
+		if reflect.DeepEqual(t, typ) {
+			return TypeId(id)
+		}
+	}
+	id := TypeId(len(m.Types))
+	m.Types = append(m.Types, typ)
+	return id
+}
+
+func (m *Module) UnitTypeId() TypeId {
+	panic("unimplemented")
 }
 
 type Scope struct {
@@ -168,10 +235,18 @@ func (s *Scope) Import(name string) *Module {
 	return s.Module.Imports[id]
 }
 
-func (s *Scope) Type(name string) Type {
+func (s *Scope) Type(name string) (Type, TypeId) {
 	id, ok := s.Types[name]
 	if !ok {
-		return nil
+		return nil, -1
 	}
-	return s.Module.Types[id]
+	return s.Module.Types[id], id
+}
+
+func (s *Scope) DefFun(name string, args []TypeId, returns TypeId) {
+	typeId := s.Module.TypeId(&FunctionType{
+		Args:    args,
+		Returns: returns,
+	})
+	s.Funs[name] = typeId
 }

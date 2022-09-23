@@ -90,33 +90,51 @@ func TestCheckImports(t *testing.T) {
 }
 
 func TestCheckTypesSignatures(t *testing.T) {
-	fileA := &wall.FileNode{
+	file := &wall.FileNode{
 		Defs: []wall.DefNode{
 			&wall.StructDef{
 				Name: wall.Token{Content: []byte("a")},
 			},
-			&wall.ParsedImportDef{
-				ImportDef: wall.ImportDef{
-					Name: wall.Token{Content: []byte("B")},
-				},
-				ParsedNode: nil,
-			},
 		},
 	}
-	fileB := &wall.FileNode{
+	mod := wall.NewModule()
+	wall.CheckTypesSignatures(file, mod)
+	typ, _ := mod.GlobalScope.Type("a")
+	assert.Equal(t, typ, wall.NewStructType())
+}
+
+func TestCheckFunctionsSignatures(t *testing.T) {
+	file := &wall.FileNode{
 		Defs: []wall.DefNode{
 			&wall.StructDef{
-				Name: wall.Token{Content: []byte("b")},
+				Name: wall.Token{Content: []byte("A")},
+			},
+			&wall.StructDef{
+				Name: wall.Token{Content: []byte("B")},
+			},
+			&wall.FunDef{
+				Fun: wall.Token{},
+				Id:  wall.Token{Content: []byte("a")},
+				Params: []wall.FunParam{{
+					Type: &wall.IdTypeNode{Token: wall.Token{Content: []byte("A")}},
+				}},
+				ReturnType: &wall.IdTypeNode{Token: wall.Token{Content: []byte("B")}},
 			},
 		},
 	}
-	fileA.Defs[1].(*wall.ParsedImportDef).ParsedNode = fileB
-	modA := wall.NewModule()
-	wall.CheckImports(fileA, modA)
-	wall.CheckTypesSignatures(fileA, modA)
-	assert.Equal(t, modA.GlobalScope.Type("a"), wall.NewStructType())
-	modB := modA.GlobalScope.Import("B")
-	if assert.NotNil(t, modB) {
-		assert.Equal(t, modB.GlobalScope.Type("b"), wall.NewStructType())
+	mod := wall.NewModule()
+	wall.CheckTypesSignatures(file, mod)
+	wall.CheckFunctionsSignatures(file, mod)
+	typeA, typeIdA := mod.GlobalScope.Type("A")
+	assert.NotNil(t, typeA)
+	typeB, typeIdB := mod.GlobalScope.Type("B")
+	assert.NotNil(t, typeB)
+	if fun, ok := mod.GlobalScope.Funs["a"]; assert.Equal(t, ok, true) {
+		assert.Equal(t, fun, mod.TypeId(&wall.FunctionType{
+			Args: []wall.TypeId{
+				typeIdA,
+			},
+			Returns: typeIdB,
+		}))
 	}
 }
