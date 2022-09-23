@@ -26,18 +26,18 @@ func CheckForDuplications(f *FileNode) error {
 func CheckImports(f *FileNode, m *Module) {
 	checkedImports := make(map[*FileNode]*Module)
 	checkedImports[f] = m
-	importCheckingLoop(f, m, f, checkedImports)
+	importCheckingLoop(f, m, checkedImports)
 }
 
-func checkImports(f *FileNode, m *Module, start *FileNode, checkedModules map[*FileNode]*Module) {
-	if f == start {
+func checkImports(f *FileNode, m *Module, checkedModules map[*FileNode]*Module) {
+	if _, checked := checkedModules[f]; checked {
 		return
 	}
 	checkedModules[f] = m
-	importCheckingLoop(f, m, start, checkedModules)
+	importCheckingLoop(f, m, checkedModules)
 }
 
-func importCheckingLoop(f *FileNode, m *Module, start *FileNode, checkedModules map[*FileNode]*Module) {
+func importCheckingLoop(f *FileNode, m *Module, checkedModules map[*FileNode]*Module) {
 	for _, def := range f.Defs {
 		switch importDef := def.(type) {
 		case *ImportDef:
@@ -50,13 +50,28 @@ func importCheckingLoop(f *FileNode, m *Module, start *FileNode, checkedModules 
 				module = NewModule()
 			}
 			_ = m.AddImport(string(def.id()), module)
-			checkImports(importDef.ParsedNode, module, start, checkedModules)
+			checkImports(importDef.ParsedNode, module, checkedModules)
 		}
 	}
 }
 
-func CheckTypesSignatures(f *FileNode, m *Module) error {
-	panic("todo")
+func CheckTypesSignatures(f *FileNode, m *Module) {
+	checkTypesSignatures(f, m, make(map[*FileNode]struct{}))
+}
+
+func checkTypesSignatures(f *FileNode, m *Module, checkedNodes map[*FileNode]struct{}) {
+	if _, checked := checkedNodes[f]; checked {
+		return
+	}
+	checkedNodes[f] = struct{}{}
+	for _, def := range f.Defs {
+		switch df := def.(type) {
+		case *ParsedImportDef:
+			checkTypesSignatures(df.ParsedNode, m.GlobalScope.Import(string(df.id())), checkedNodes)
+		case *StructDef:
+			_ = m.AddType(string(df.id()), NewStructType())
+		}
+	}
 }
 
 type Type interface {
@@ -69,6 +84,12 @@ type PointerType struct {
 
 type StructType struct {
 	Fields map[string]Type
+}
+
+func NewStructType() *StructType {
+	return &StructType{
+		Fields: make(map[string]Type),
+	}
 }
 
 type FunctionType struct {
@@ -112,6 +133,13 @@ func (m *Module) AddImport(name string, module *Module) ImportId {
 	return id
 }
 
+func (m *Module) AddType(name string, typ Type) TypeId {
+	id := TypeId(len(m.Types))
+	m.Types = append(m.Types, typ)
+	m.GlobalScope.Types[name] = id
+	return id
+}
+
 type Scope struct {
 	Parent  *Scope
 	Module  *Module
@@ -138,4 +166,12 @@ func (s *Scope) Import(name string) *Module {
 		return nil
 	}
 	return s.Module.Imports[id]
+}
+
+func (s *Scope) Type(name string) Type {
+	id, ok := s.Types[name]
+	if !ok {
+		return nil
+	}
+	return s.Module.Types[id]
 }

@@ -88,3 +88,35 @@ func TestCheckImports(t *testing.T) {
 		assert.Equal(t, moduleA, moduleA2)
 	}
 }
+
+func TestCheckTypesSignatures(t *testing.T) {
+	fileA := &wall.FileNode{
+		Defs: []wall.DefNode{
+			&wall.StructDef{
+				Name: wall.Token{Content: []byte("a")},
+			},
+			&wall.ParsedImportDef{
+				ImportDef: wall.ImportDef{
+					Name: wall.Token{Content: []byte("B")},
+				},
+				ParsedNode: nil,
+			},
+		},
+	}
+	fileB := &wall.FileNode{
+		Defs: []wall.DefNode{
+			&wall.StructDef{
+				Name: wall.Token{Content: []byte("b")},
+			},
+		},
+	}
+	fileA.Defs[1].(*wall.ParsedImportDef).ParsedNode = fileB
+	modA := wall.NewModule()
+	wall.CheckImports(fileA, modA)
+	wall.CheckTypesSignatures(fileA, modA)
+	assert.Equal(t, modA.GlobalScope.Type("a"), wall.NewStructType())
+	modB := modA.GlobalScope.Import("B")
+	if assert.NotNil(t, modB) {
+		assert.Equal(t, modB.GlobalScope.Type("b"), wall.NewStructType())
+	}
+}
