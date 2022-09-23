@@ -57,3 +57,34 @@ func TestCheckForDuplications(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckImports(t *testing.T) {
+	fileA := &wall.FileNode{
+		Defs: []wall.DefNode{
+			&wall.ParsedImportDef{
+				ImportDef: wall.ImportDef{
+					Name: wall.Token{Content: []byte("B")},
+				},
+				ParsedNode: nil,
+			},
+		},
+	}
+	fileB := &wall.FileNode{
+		Defs: []wall.DefNode{
+			&wall.ParsedImportDef{
+				ImportDef: wall.ImportDef{
+					Name: wall.Token{Content: []byte("A")},
+				},
+				ParsedNode: fileA,
+			},
+		},
+	}
+	fileA.Defs[0].(*wall.ParsedImportDef).ParsedNode = fileB
+	moduleA := wall.NewModule()
+	wall.CheckImports(fileA, moduleA)
+	moduleB := moduleA.GlobalScope.Import("B")
+	if assert.NotNil(t, moduleB) {
+		moduleA2 := moduleB.GlobalScope.Import("A")
+		assert.Equal(t, moduleA, moduleA2)
+	}
+}
