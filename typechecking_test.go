@@ -106,12 +106,6 @@ func TestCheckTypesSignatures(t *testing.T) {
 func TestCheckFunctionsSignatures(t *testing.T) {
 	file := &wall.FileNode{
 		Defs: []wall.DefNode{
-			&wall.StructDef{
-				Name: wall.Token{Content: []byte("A")},
-			},
-			&wall.StructDef{
-				Name: wall.Token{Content: []byte("B")},
-			},
 			&wall.FunDef{
 				Fun: wall.Token{},
 				Id:  wall.Token{Content: []byte("a")},
@@ -123,12 +117,9 @@ func TestCheckFunctionsSignatures(t *testing.T) {
 		},
 	}
 	mod := wall.NewModule()
-	wall.CheckTypesSignatures(file, mod)
-	wall.CheckFunctionsSignatures(file, mod)
-	typeA, typeIdA := mod.GlobalScope.Type("A")
-	assert.NotNil(t, typeA)
-	typeB, typeIdB := mod.GlobalScope.Type("B")
-	assert.NotNil(t, typeB)
+	typeIdA := mod.DefType("A", &wall.StructType{})
+	typeIdB := mod.DefType("B", &wall.StructType{})
+	assert.NoError(t, wall.CheckFunctionsSignatures(file, mod))
 	if fun, ok := mod.GlobalScope.Funs["a"]; assert.Equal(t, ok, true) {
 		assert.Equal(t, fun, mod.TypeId(&wall.FunctionType{
 			Args: []wall.TypeId{
