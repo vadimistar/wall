@@ -128,7 +128,7 @@ func CodegenExpr(expr ExprNode, builder llvm.Builder, types map[string]llvm.Type
 		case STAR:
 			return builder.CreateMul(left, right, tempName())
 		case SLASH:
-			return builder.CreateUDiv(left, right, tempName())
+			return builder.CreateSDiv(left, right, tempName())
 		}
 	case *GroupedExprNode:
 		return CodegenExpr(expr.Inner, builder, types, values)
