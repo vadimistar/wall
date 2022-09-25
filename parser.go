@@ -58,7 +58,7 @@ func resolveImports(file *FileNode, parsedModules map[string]*FileNode) error {
 }
 
 func resolveImport(def *ImportDef, parsedModules map[string]*FileNode) (*ParsedImportDef, error) {
-	importedFilename := filepath.Join(filepath.Dir(def.Import.Filename), toModuleFilename(string(def.Name.Content)))
+	importedFilename := filepath.Join(filepath.Dir(def.Import.Filename), moduleToFilename(string(def.Name.Content)))
 	absImportedFilename, err := filepath.Abs(importedFilename)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func resolveImport(def *ImportDef, parsedModules map[string]*FileNode) (*ParsedI
 	}, nil
 }
 
-func toModuleFilename(name string) string {
+func moduleToFilename(name string) string {
 	const WALL_EXTENSION = ".wl"
 	return name + WALL_EXTENSION
 }

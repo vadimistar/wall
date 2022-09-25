@@ -139,6 +139,7 @@ func (s *Scanner) Scan() (Token, error) {
 		t = s.token(EOF)
 	case '\n':
 		s.advance()
+		s.pos.Line++
 		t = s.token(NEWLINE)
 	case '+':
 		s.advance()
