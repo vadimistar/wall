@@ -165,3 +165,310 @@ func TestCheckTypesContents(t *testing.T) {
 		})
 	}
 }
+
+type checkBlocksTest struct {
+	block      *wall.BlockStmt
+	returnType wall.TypeNode
+}
+
+var checkBlocksTests = []checkBlocksTest{
+	{
+		block: &wall.BlockStmt{
+			Stmts: []wall.StmtNode{},
+		},
+		returnType: nil,
+	},
+	{
+		block: &wall.BlockStmt{
+			Stmts: []wall.StmtNode{},
+		},
+		returnType: &wall.IdTypeNode{
+			Token: wall.Token{Content: []byte("()")},
+		},
+	},
+	{
+		block: &wall.BlockStmt{
+			Stmts: []wall.StmtNode{
+				&wall.ExprStmt{
+					Expr: &wall.LiteralExprNode{
+						Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
+					},
+				},
+			},
+		},
+		returnType: &wall.IdTypeNode{
+			Token: wall.Token{Content: []byte("int")},
+		},
+	},
+	{
+		block: &wall.BlockStmt{
+			Stmts: []wall.StmtNode{
+				&wall.ExprStmt{
+					Expr: &wall.LiteralExprNode{
+						Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
+					},
+				},
+				&wall.ExprStmt{
+					Expr: &wall.LiteralExprNode{
+						Token: wall.Token{Kind: wall.FLOAT, Content: []byte("1.0")},
+					},
+				},
+			},
+		},
+		returnType: &wall.IdTypeNode{
+			Token: wall.Token{Content: []byte("float")},
+		},
+	},
+}
+
+func TestCheckBlocks(t *testing.T) {
+	for _, test := range checkBlocksTests {
+		file := &wall.FileNode{
+			Defs: []wall.DefNode{
+				&wall.FunDef{
+					Id:         wall.Token{Content: []byte("a")},
+					Body:       test.block,
+					ReturnType: test.returnType,
+				},
+			},
+		}
+		mod := wall.NewModule()
+		assert.NoError(t, wall.CheckFunctionsSignatures(file, mod))
+		assert.NoError(t, wall.CheckBlocks(file, mod))
+	}
+}
+
+type checkStmtTest struct {
+	stmt   wall.StmtNode
+	typeid wall.TypeId
+}
+
+var checkStmtTests = []checkStmtTest{
+	{
+		stmt: &wall.VarStmt{
+			Id: wall.Token{Content: []byte("")},
+			Value: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.UNIT_TYPE_ID,
+	},
+	{
+		stmt: &wall.ExprStmt{
+			Expr: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.INT_TYPE_ID,
+	},
+}
+
+func TestCheckStmt(t *testing.T) {
+	for _, test := range checkStmtTests {
+		mod := wall.NewModule()
+		typ, err := wall.CheckStmt(test.stmt, mod.GlobalScope)
+		assert.NoError(t, err)
+		assert.Equal(t, typ, test.typeid)
+	}
+}
+
+type checkExprTest struct {
+	expr   wall.ExprNode
+	typeid wall.TypeId
+}
+
+var checkExprTests = []checkExprTest{
+	{
+		expr: &wall.LiteralExprNode{
+			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+		},
+		typeid: wall.INT_TYPE_ID,
+	},
+	{
+		expr: &wall.LiteralExprNode{
+			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0.0")},
+		},
+		typeid: wall.FLOAT_TYPE_ID,
+	},
+	{
+		expr: &wall.GroupedExprNode{
+			Inner: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.FLOAT_TYPE_ID,
+	},
+	{
+		expr: &wall.UnaryExprNode{
+			Operator: wall.Token{Kind: wall.PLUS},
+			Operand: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.INT_TYPE_ID,
+	},
+	{
+		expr: &wall.UnaryExprNode{
+			Operator: wall.Token{Kind: wall.PLUS},
+			Operand: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.FLOAT_TYPE_ID,
+	},
+	{
+		expr: &wall.UnaryExprNode{
+			Operator: wall.Token{Kind: wall.MINUS},
+			Operand: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.INT_TYPE_ID,
+	},
+	{
+		expr: &wall.UnaryExprNode{
+			Operator: wall.Token{Kind: wall.MINUS},
+			Operand: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.FLOAT_TYPE_ID,
+	},
+	{
+		expr: &wall.BinaryExprNode{
+			Left: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.PLUS},
+			Right: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.INT_TYPE_ID,
+	},
+	{
+		expr: &wall.BinaryExprNode{
+			Left: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.MINUS},
+			Right: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.INT_TYPE_ID,
+	},
+	{
+		expr: &wall.BinaryExprNode{
+			Left: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.STAR},
+			Right: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.INT_TYPE_ID,
+	},
+	{
+		expr: &wall.BinaryExprNode{
+			Left: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.SLASH},
+			Right: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.INT_TYPE_ID,
+	},
+	{
+		expr: &wall.BinaryExprNode{
+			Left: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.PLUS},
+			Right: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.FLOAT_TYPE_ID,
+	},
+	{
+		expr: &wall.BinaryExprNode{
+			Left: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.MINUS},
+			Right: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.FLOAT_TYPE_ID,
+	},
+	{
+		expr: &wall.BinaryExprNode{
+			Left: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.STAR},
+			Right: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.FLOAT_TYPE_ID,
+	},
+	{
+		expr: &wall.BinaryExprNode{
+			Left: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.SLASH},
+			Right: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.FLOAT_TYPE_ID,
+	},
+}
+
+func TestCheckExpr(t *testing.T) {
+	for _, test := range checkExprTests {
+		mod := wall.NewModule()
+		typ, err := wall.CheckExpr(test.expr, mod.GlobalScope)
+		if assert.NoError(t, err) {
+			assert.Equal(t, test.typeid, typ)
+		}
+	}
+}
+
+func TestCheckVarStmt(t *testing.T) {
+	file := &wall.FileNode{
+		Defs: []wall.DefNode{
+			&wall.FunDef{
+				Id: wall.Token{Content: []byte("")},
+				Body: &wall.BlockStmt{
+					Stmts: []wall.StmtNode{
+						&wall.VarStmt{
+							Id: wall.Token{Content: []byte("a")},
+							Value: &wall.LiteralExprNode{
+								Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+							},
+						},
+						&wall.ExprStmt{
+							Expr: &wall.LiteralExprNode{
+								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+							},
+						},
+					},
+				},
+				ReturnType: &wall.IdTypeNode{
+					Token: wall.Token{Content: []byte("int")},
+				},
+			},
+		},
+	}
+	mod := wall.NewModule()
+	assert.NoError(t, wall.CheckFunctionsSignatures(file, mod))
+	assert.NoError(t, wall.CheckBlocks(file, mod))
+}

@@ -1,6 +1,9 @@
 package wall
 
-import "reflect"
+import (
+	"fmt"
+	"reflect"
+)
 
 func CheckForDuplications(f *FileNode) error {
 	notypes := make(map[string]struct{}, 0)
@@ -106,7 +109,7 @@ func checkFunctionsSignatures(f *FileNode, m *Module, checkedNodes map[*FileNode
 					return err
 				}
 			} else {
-				returnType = m.UnitTypeId()
+				returnType = UNIT_TYPE_ID
 			}
 			m.GlobalScope.DefFun(string(df.id()), argsTypes, returnType)
 		}
@@ -151,6 +154,207 @@ func checkTypesContents(f *FileNode, m *Module, checkedNodes map[*FileNode]struc
 	return nil
 }
 
+func CheckBlocks(f *FileNode, m *Module) error {
+	return checkBlocks(f, m, make(map[*FileNode]struct{}))
+}
+
+func checkBlocks(f *FileNode, m *Module, checkedNodes map[*FileNode]struct{}) error {
+	if _, checked := checkedNodes[f]; checked {
+		return nil
+	}
+	checkedNodes[f] = struct{}{}
+	for _, def := range f.Defs {
+		switch df := def.(type) {
+		case *ParsedImportDef:
+			checkTypesSignatures(df.ParsedNode, m.GlobalScope.Import(string(df.id())), checkedNodes)
+		case *FunDef:
+			bodyType, err := CheckStmt(df.Body, m.GlobalScope)
+			if err != nil {
+				return err
+			}
+			funType := m.Types[m.GlobalScope.Funs[string(df.Id.Content)]].(*FunctionType)
+			if funType.Returns != bodyType {
+				return NewError(df.ReturnType.pos(), "return type is %s, but body returns %s", m.typeIdAsStr(funType.Returns), m.typeIdAsStr(bodyType))
+			}
+		}
+	}
+	return nil
+}
+
+func checkBlock(block *BlockStmt, scope *Scope) (TypeId, error) {
+	scope = NewScope(scope, scope.Module)
+	if len(block.Stmts) == 0 {
+		return UNIT_TYPE_ID, nil
+	}
+	for i, st := range block.Stmts {
+		t, err := CheckStmt(st, scope)
+		if err != nil {
+			return -1, err
+		}
+		if i >= len(block.Stmts)-1 {
+			return t, nil
+		}
+	}
+	panic("unreachable")
+}
+
+func CheckStmt(stmt StmtNode, scope *Scope) (TypeId, error) {
+	switch stmt := stmt.(type) {
+	case *BlockStmt:
+		return checkBlock(stmt, scope)
+	case *VarStmt:
+		typ, err := CheckExpr(stmt.Value, scope)
+		if err != nil {
+			return -1, err
+		}
+		scope.DefVar(string(stmt.Id.Content), typ)
+	case *ExprStmt:
+		return CheckExpr(stmt.Expr, scope)
+	default:
+		panic("unreachable")
+	}
+	return UNIT_TYPE_ID, nil
+}
+
+func CheckExpr(expr ExprNode, scope *Scope) (TypeId, error) {
+	switch expr := expr.(type) {
+	case *UnaryExprNode:
+		return checkUnaryExpr(expr, scope)
+	case *BinaryExprNode:
+		return checkBinaryExpr(expr, scope)
+	case *GroupedExprNode:
+		return CheckExpr(expr.Inner, scope)
+	case *LiteralExprNode:
+		return checkLiteralExpr(expr, scope)
+	}
+	panic("unreachable")
+}
+
+func checkUnaryExpr(expr *UnaryExprNode, scope *Scope) (TypeId, error) {
+	inner, err := CheckExpr(expr.Operand, scope)
+	if err != nil {
+		return -1, err
+	}
+	switch expr.Operator.Kind {
+	case PLUS:
+		return inner, nil
+	case MINUS:
+		if canBeNegated(inner, scope.Module) {
+			return inner, nil
+		}
+		return -1, NewError(expr.Operator.Pos, "trait %s is not implemented for %s", NEGATE_OPERATOR_TRAIT_NAME, scope.Module.typeIdAsStr(inner))
+	}
+	panic("unreachable")
+}
+
+func checkBinaryExpr(expr *BinaryExprNode, scope *Scope) (TypeId, error) {
+	left, err := CheckExpr(expr.Left, scope)
+	if err != nil {
+		return -1, err
+	}
+	right, err := CheckExpr(expr.Right, scope)
+	if err != nil {
+		return -1, err
+	}
+	if left != right {
+		return -1, NewError(expr.Op.Pos, "types of left and right operands are not the same (%s, %s)", scope.Module.typeIdAsStr(left), scope.Module.typeIdAsStr(right))
+	}
+	switch expr.Op.Kind {
+	case PLUS:
+		if !traitIsImplemented(ADD_OPERATOR_TRAIT_NAME, left, scope.Module) {
+			return -1, NewError(expr.Op.Pos, "trait %s is not implemented for type %s", ADD_OPERATOR_TRAIT_NAME, scope.Module.typeIdAsStr(left))
+		}
+		return left, nil
+	case MINUS:
+		if !traitIsImplemented(SUBTRACT_OPERATOR_TRAIT_NAME, left, scope.Module) {
+			return -1, NewError(expr.Op.Pos, "trait %s is not implemented for type %s", SUBTRACT_OPERATOR_TRAIT_NAME, scope.Module.typeIdAsStr(left))
+		}
+		return left, nil
+	case STAR:
+		if !traitIsImplemented(MULTIPLY_OPERATOR_TRAIT_NAME, left, scope.Module) {
+			return -1, NewError(expr.Op.Pos, "trait %s is not implemented for type %s", MULTIPLY_OPERATOR_TRAIT_NAME, scope.Module.typeIdAsStr(left))
+		}
+		return left, nil
+	case SLASH:
+		if !traitIsImplemented(DIVIDE_OPERATOR_TRAIT_NAME, left, scope.Module) {
+			return -1, NewError(expr.Op.Pos, "trait %s is not implemented for type %s", DIVIDE_OPERATOR_TRAIT_NAME, scope.Module.typeIdAsStr(left))
+		}
+		return left, nil
+	}
+	panic("unreachable")
+}
+
+func checkLiteralExpr(expr *LiteralExprNode, scope *Scope) (TypeId, error) {
+	switch expr.Kind {
+	case INTEGER:
+		return INT_TYPE_ID, nil
+	case FLOAT:
+		return FLOAT_TYPE_ID, nil
+	case IDENTIFIER:
+		if typeId := scope.findVar(string(expr.Content)); typeId != nil {
+			return *typeId, nil
+		}
+		return -1, NewError(expr.pos(), "undeclared: %s", expr.Token.Content)
+	}
+	panic("unimplemented")
+}
+
+func (m *Module) typeIdAsStr(id TypeId) string {
+	switch typ := m.Types[id].(type) {
+	case *PointerType:
+		return "*" + m.typeIdAsStr(typ.To)
+	case *StructType:
+		if name := m.GlobalScope.findNameOfTypeId(id); name != nil {
+			return *name
+		}
+		panic("invalid type id")
+	case *FunctionType:
+		params := ""
+		for i, param := range typ.Args {
+			params += m.typeIdAsStr(param)
+			if i < len(typ.Args)-1 {
+				params += ", "
+			}
+		}
+		return fmt.Sprintf("fun (%s) %s", params, m.typeIdAsStr(typ.Returns))
+	case *ExternType:
+		importName := m.GlobalScope.findNameOfImportId(typ.Import)
+		if importName == nil {
+			panic("invalid import id")
+		}
+		importedType := m.Imports[typ.Import].typeIdAsStr(typ.Type)
+		return fmt.Sprintf("%s.%s", *importName, importedType)
+	case *BuildinType:
+		switch id {
+		case UNIT_TYPE_ID:
+			return "()"
+		case INT_TYPE_ID:
+			return "int"
+		case FLOAT_TYPE_ID:
+			return "float"
+		}
+	}
+	panic("unreachable")
+}
+
+const NEGATE_OPERATOR_TRAIT_NAME = "Negate"
+const ADD_OPERATOR_TRAIT_NAME = "Add"
+const SUBTRACT_OPERATOR_TRAIT_NAME = "Subtract"
+const MULTIPLY_OPERATOR_TRAIT_NAME = "Multiply"
+const DIVIDE_OPERATOR_TRAIT_NAME = "Divide"
+
+func canBeNegated(inner TypeId, module *Module) bool {
+	return traitIsImplemented(NEGATE_OPERATOR_TRAIT_NAME, inner, module)
+}
+
+func traitIsImplemented(name string, forType TypeId, module *Module) bool {
+	switch name {
+	case NEGATE_OPERATOR_TRAIT_NAME, ADD_OPERATOR_TRAIT_NAME, SUBTRACT_OPERATOR_TRAIT_NAME, MULTIPLY_OPERATOR_TRAIT_NAME, DIVIDE_OPERATOR_TRAIT_NAME:
+		return forType == INT_TYPE_ID || forType == FLOAT_TYPE_ID
+	}
+	return false
+}
+
 func checkType(node TypeNode, module *Module) (TypeId, error) {
 	switch nd := node.(type) {
 	case *IdTypeNode:
@@ -191,10 +395,19 @@ type ExternType struct {
 	Type   TypeId
 }
 
+type BuildinType struct{}
+
+const (
+	UNIT_TYPE_ID TypeId = iota
+	INT_TYPE_ID
+	FLOAT_TYPE_ID
+)
+
 func (p *PointerType) typ()  {}
 func (s *StructType) typ()   {}
 func (f *FunctionType) typ() {}
 func (e *ExternType) typ()   {}
+func (b *BuildinType) typ()  {}
 
 type TypeId int
 type ImportId int
@@ -212,6 +425,9 @@ func NewModule() *Module {
 		GlobalScope: NewScope(nil, nil),
 	}
 	m.GlobalScope.Module = m
+	m.DefType("()", &BuildinType{})
+	m.DefType("int", &BuildinType{})
+	m.DefType("float", &BuildinType{})
 	return m
 }
 
@@ -240,28 +456,30 @@ func (m *Module) TypeId(typ Type) TypeId {
 	return id
 }
 
-func (m *Module) UnitTypeId() TypeId {
-	panic("unimplemented")
-}
-
 type Scope struct {
-	Parent  *Scope
-	Module  *Module
-	Types   map[string]TypeId
-	Funs    map[string]TypeId
-	Vars    map[string]TypeId
-	Imports map[string]ImportId
+	Parent   *Scope
+	Children []*Scope
+	Module   *Module
+	Types    map[string]TypeId
+	Funs     map[string]TypeId
+	Vars     map[string]TypeId
+	Imports  map[string]ImportId
 }
 
 func NewScope(parent *Scope, module *Module) *Scope {
-	return &Scope{
-		Parent:  parent,
-		Module:  module,
-		Types:   map[string]TypeId{},
-		Funs:    map[string]TypeId{},
-		Vars:    map[string]TypeId{},
-		Imports: map[string]ImportId{},
+	s := &Scope{
+		Parent:   parent,
+		Children: make([]*Scope, 0),
+		Module:   module,
+		Types:    map[string]TypeId{},
+		Funs:     map[string]TypeId{},
+		Vars:     map[string]TypeId{},
+		Imports:  map[string]ImportId{},
 	}
+	if parent != nil {
+		parent.Children = append(parent.Children, s)
+	}
+	return s
 }
 
 func (s *Scope) Import(name string) *Module {
@@ -286,4 +504,46 @@ func (s *Scope) DefFun(name string, args []TypeId, returns TypeId) {
 		Returns: returns,
 	})
 	s.Funs[name] = typeId
+}
+
+func (s *Scope) DefVar(name string, typeId TypeId) {
+	s.Vars[name] = typeId
+}
+
+func (s *Scope) findNameOfTypeId(id TypeId) *string {
+	for name, typ := range s.Types {
+		if typ == id {
+			return &name
+		}
+	}
+	for _, child := range s.Children {
+		if n := child.findNameOfTypeId(id); n != nil {
+			return n
+		}
+	}
+	return nil
+}
+
+func (s *Scope) findNameOfImportId(id ImportId) *string {
+	for name, typ := range s.Imports {
+		if typ == id {
+			return &name
+		}
+	}
+	for _, child := range s.Children {
+		if n := child.findNameOfImportId(id); n != nil {
+			return n
+		}
+	}
+	return nil
+}
+
+func (s *Scope) findVar(name string) *TypeId {
+	if typeId, ok := s.Vars[name]; ok {
+		return &typeId
+	}
+	if s.Parent != nil {
+		return s.Parent.findVar(name)
+	}
+	return nil
 }
