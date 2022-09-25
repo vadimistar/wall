@@ -26,7 +26,7 @@ type FunDef struct {
 	Id         Token
 	Params     []FunParam
 	ReturnType TypeNode
-	Body       StmtNode
+	Body       *BlockStmt
 }
 
 type FunParam struct {
@@ -108,6 +108,11 @@ type BlockStmt struct {
 	Right Token
 }
 
+type ReturnStmt struct {
+	Return Token
+	Arg    ExprNode
+}
+
 func (v *VarStmt) pos() Pos {
 	return v.Id.Pos
 }
@@ -117,10 +122,14 @@ func (e *ExprStmt) pos() Pos {
 func (b *BlockStmt) pos() Pos {
 	return b.Left.Pos
 }
+func (r *ReturnStmt) pos() Pos {
+	return r.Return.Pos
+}
 
-func (v *VarStmt) stmtNode()   {}
-func (e *ExprStmt) stmtNode()  {}
-func (b *BlockStmt) stmtNode() {}
+func (v *VarStmt) stmtNode()    {}
+func (e *ExprStmt) stmtNode()   {}
+func (b *BlockStmt) stmtNode()  {}
+func (r *ReturnStmt) stmtNode() {}
 
 type ExprNode interface {
 	AstNode

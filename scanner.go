@@ -31,6 +31,7 @@ const (
 	FUN
 	IMPORT
 	STRUCT
+	RETURN
 )
 
 func (t TokenKind) String() string {
@@ -73,6 +74,8 @@ func (t TokenKind) String() string {
 		return "IMPORT"
 	case STRUCT:
 		return "STRUCT"
+	case RETURN:
+		return "RETURN"
 	}
 	panic("unreachable")
 }
@@ -207,6 +210,9 @@ func (s *Scanner) id() Token {
 	}
 	if bytes.Equal(t.Content, []byte("struct")) {
 		t.Kind = STRUCT
+	}
+	if bytes.Equal(t.Content, []byte("return")) {
+		t.Kind = RETURN
 	}
 	return t
 }

@@ -5,6 +5,25 @@ import (
 	"reflect"
 )
 
+func Check(f *FileNode) (*Module, error) {
+	if err := CheckForDuplications(f); err != nil {
+		return nil, err
+	}
+	m := NewModule()
+	CheckImports(f, m)
+	CheckTypesSignatures(f, m)
+	if err := CheckFunctionsSignatures(f, m); err != nil {
+		return nil, err
+	}
+	if err := CheckTypesContents(f, m); err != nil {
+		return nil, err
+	}
+	if err := CheckBlocks(f, m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func CheckForDuplications(f *FileNode) error {
 	notypes := make(map[string]struct{}, 0)
 	types := make(map[string]struct{}, 0)
@@ -164,56 +183,116 @@ func checkBlocks(f *FileNode, m *Module, checkedNodes map[*FileNode]struct{}) er
 	}
 	checkedNodes[f] = struct{}{}
 	for _, def := range f.Defs {
-		switch df := def.(type) {
+		switch def := def.(type) {
 		case *ParsedImportDef:
-			checkTypesSignatures(df.ParsedNode, m.GlobalScope.Import(string(df.id())), checkedNodes)
+			checkTypesSignatures(def.ParsedNode, m.GlobalScope.Import(string(def.id())), checkedNodes)
 		case *FunDef:
-			bodyType, err := CheckStmt(df.Body, m.GlobalScope)
+			funType := m.Types[m.GlobalScope.Funs[string(def.Id.Content)]].(*FunctionType)
+			paramsScope := NewScope(m.GlobalScope, m)
+			for _, param := range def.Params {
+				t, err := checkType(param.Type, m)
+				if err != nil {
+					return err
+				}
+				paramsScope.DefVar(string(param.Id.Content), t)
+			}
+			_, _, err := checkBlock(def.Body, paramsScope, &MustReturn{
+				TypeId: funType.Returns,
+			})
 			if err != nil {
 				return err
-			}
-			funType := m.Types[m.GlobalScope.Funs[string(df.Id.Content)]].(*FunctionType)
-			if funType.Returns != bodyType {
-				return NewError(df.ReturnType.pos(), "return type is %s, but body returns %s", m.typeIdAsStr(funType.Returns), m.typeIdAsStr(bodyType))
 			}
 		}
 	}
 	return nil
 }
 
-func checkBlock(block *BlockStmt, scope *Scope) (TypeId, error) {
+func checkBlock(block *BlockStmt, scope *Scope, controlFlow ControlFlow) (typeid TypeId, returns TypeId, err error) {
 	scope = NewScope(scope, scope.Module)
 	if len(block.Stmts) == 0 {
-		return UNIT_TYPE_ID, nil
+		switch controlFlow := controlFlow.(type) {
+		case *MustReturn:
+			if controlFlow.TypeId != UNIT_TYPE_ID {
+				return -1, -1, NewError(block.pos(), "expected %s, but %s is returned", scope.Module.typeIdAsStr(controlFlow.TypeId), scope.Module.typeIdAsStr(UNIT_TYPE_ID))
+			}
+			return UNIT_TYPE_ID, UNIT_TYPE_ID, nil
+		}
+		return UNIT_TYPE_ID, -1, nil
 	}
-	for i, st := range block.Stmts {
-		t, err := CheckStmt(st, scope)
+	returns = -1
+	for i, stmt := range block.Stmts {
+		var cf ControlFlow
+		if i >= len(block.Stmts)-1 {
+			cf = controlFlow
+		} else {
+			cf = &MayReturn{
+				TypeId: controlFlow.typeId(),
+			}
+		}
+		t, currentReturns, err := CheckStmt(stmt, scope, cf)
 		if err != nil {
-			return -1, err
+			return -1, -1, err
+		}
+		if currentReturns >= 0 {
+			if currentReturns != controlFlow.typeId() {
+				return -1, -1, NewError(stmt.pos(), "unexpected return type: %s (%s is expected)", scope.Module.typeIdAsStr(currentReturns), scope.Module.typeIdAsStr(controlFlow.typeId()))
+			}
+			returns = currentReturns
 		}
 		if i >= len(block.Stmts)-1 {
-			return t, nil
+			switch controlFlow := controlFlow.(type) {
+			case *MustReturn:
+				if returns < 0 {
+					if controlFlow.TypeId != UNIT_TYPE_ID {
+						return -1, -1, NewError(stmt.pos(), "expected return statement")
+					}
+					return t, UNIT_TYPE_ID, nil
+				}
+			}
+			return t, returns, nil
 		}
 	}
 	panic("unreachable")
 }
 
-func CheckStmt(stmt StmtNode, scope *Scope) (TypeId, error) {
+// Checks a statement node
+//
+// The 'returns' return variable is a valid TypeId (>= 0), if the provided statement returns a value
+func CheckStmt(stmt StmtNode, scope *Scope, controlFlow ControlFlow) (typeId TypeId, returns TypeId, err error) {
 	switch stmt := stmt.(type) {
 	case *BlockStmt:
-		return checkBlock(stmt, scope)
+		return checkBlock(stmt, scope, controlFlow)
 	case *VarStmt:
 		typ, err := CheckExpr(stmt.Value, scope)
 		if err != nil {
-			return -1, err
+			return -1, -1, err
 		}
 		scope.DefVar(string(stmt.Id.Content), typ)
 	case *ExprStmt:
-		return CheckExpr(stmt.Expr, scope)
+		_, err := CheckExpr(stmt.Expr, scope)
+		if err != nil {
+			return -1, -1, err
+		}
+		return UNIT_TYPE_ID, -1, nil
+	case *ReturnStmt:
+		var argType TypeId
+		if stmt.Arg == nil {
+			argType = UNIT_TYPE_ID
+		} else {
+			t, err := CheckExpr(stmt.Arg, scope)
+			if err != nil {
+				return -1, -1, err
+			}
+			argType = t
+		}
+		if argType != controlFlow.typeId() {
+			return -1, -1, NewError(stmt.pos(), "unexpected return type: %s (%s is expected)", scope.Module.typeIdAsStr(argType), scope.Module.typeIdAsStr(controlFlow.typeId()))
+		}
+		return UNIT_TYPE_ID, argType, nil
 	default:
 		panic("unreachable")
 	}
-	return UNIT_TYPE_ID, nil
+	return UNIT_TYPE_ID, -1, nil
 }
 
 func CheckExpr(expr ExprNode, scope *Scope) (TypeId, error) {
@@ -464,6 +543,28 @@ type Scope struct {
 	Funs     map[string]TypeId
 	Vars     map[string]TypeId
 	Imports  map[string]ImportId
+}
+
+type ControlFlow interface {
+	controlFlow()
+	typeId() TypeId
+}
+
+type MustReturn struct {
+	TypeId
+}
+type MayReturn struct {
+	TypeId
+}
+
+func (m *MustReturn) controlFlow() {}
+func (m *MayReturn) controlFlow()  {}
+
+func (m *MustReturn) typeId() TypeId {
+	return m.TypeId
+}
+func (m *MayReturn) typeId() TypeId {
+	return m.TypeId
 }
 
 func NewScope(parent *Scope, module *Module) *Scope {

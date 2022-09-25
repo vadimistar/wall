@@ -130,6 +130,23 @@ func TestParseVarStmt(t *testing.T) {
 	assert.Equal(t, reflect.TypeOf(stmt), reflect.TypeOf(&wall.VarStmt{}))
 }
 
+func TestParseReturnStmt(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{{Kind: wall.RETURN}, {Kind: wall.IDENTIFIER}})
+	stmt, err := pr.ParseStmtAndEof()
+	if assert.NoError(t, err) {
+		assert.IsType(t, stmt, &wall.ReturnStmt{
+			Arg: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.IDENTIFIER},
+			},
+		})
+	}
+	pr = wall.NewParser([]wall.Token{{Kind: wall.RETURN}})
+	stmt, err = pr.ParseStmtAndEof()
+	if assert.NoError(t, err) {
+		assert.IsType(t, stmt, &wall.ReturnStmt{})
+	}
+}
+
 func TestParseBlockStmt(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{{Kind: wall.LEFTBRACE}, {Kind: wall.NEWLINE}, {Kind: wall.IDENTIFIER}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE}})
 	got, err := pr.ParseStmtAndEof()

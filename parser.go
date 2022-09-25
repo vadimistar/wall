@@ -143,7 +143,7 @@ func (p *Parser) ParseDef() (DefNode, error) {
 				return nil, err
 			}
 		}
-		body, err := p.ParseStmt()
+		body, err := p.parseBlock()
 		if err != nil {
 			return nil, err
 		}
@@ -217,30 +217,24 @@ func (p *Parser) ParseStmt() (StmtNode, error) {
 			Eq:    eq,
 			Value: val,
 		}, nil
-	case LEFTBRACE:
-		left := p.advance()
-		stmts := make([]StmtNode, 0)
-		for p.next().Kind != RIGHTBRACE {
-			if p.next().Kind == NEWLINE {
-				p.advance()
-				continue
-			}
-			stmt, err := p.ParseStmt()
+	case RETURN:
+		kw := p.advance()
+		if p.next().Kind != NEWLINE && p.next().Kind != EOF && p.next().Kind != RIGHTBRACE {
+			arg, err := p.ParseExpr()
 			if err != nil {
 				return nil, err
 			}
-			stmts = append(stmts, stmt)
-			_, err = p.match(NEWLINE)
-			if err != nil {
-				return nil, err
-			}
+			return &ReturnStmt{
+				Return: kw,
+				Arg:    arg,
+			}, nil
 		}
-		right := p.advance()
-		return &BlockStmt{
-			Left:  left,
-			Stmts: stmts,
-			Right: right,
+		return &ReturnStmt{
+			Return: kw,
+			Arg:    nil,
 		}, nil
+	case LEFTBRACE:
+		return p.parseBlock()
 	}
 	expr, err := p.ParseExpr()
 	if err != nil {
@@ -248,6 +242,32 @@ func (p *Parser) ParseStmt() (StmtNode, error) {
 	}
 	return &ExprStmt{
 		Expr: expr,
+	}, nil
+}
+
+func (p *Parser) parseBlock() (*BlockStmt, error) {
+	left := p.advance()
+	stmts := make([]StmtNode, 0)
+	for p.next().Kind != RIGHTBRACE {
+		if p.next().Kind == NEWLINE {
+			p.advance()
+			continue
+		}
+		stmt, err := p.ParseStmt()
+		if err != nil {
+			return nil, err
+		}
+		stmts = append(stmts, stmt)
+		_, err = p.match(NEWLINE)
+		if err != nil {
+			return nil, err
+		}
+	}
+	right := p.advance()
+	return &BlockStmt{
+		Left:  left,
+		Stmts: stmts,
+		Right: right,
 	}, nil
 }
 

@@ -189,8 +189,18 @@ var checkBlocksTests = []checkBlocksTest{
 	{
 		block: &wall.BlockStmt{
 			Stmts: []wall.StmtNode{
-				&wall.ExprStmt{
-					Expr: &wall.LiteralExprNode{
+				&wall.ReturnStmt{},
+			},
+		},
+		returnType: &wall.IdTypeNode{
+			Token: wall.Token{Content: []byte("()")},
+		},
+	},
+	{
+		block: &wall.BlockStmt{
+			Stmts: []wall.StmtNode{
+				&wall.ReturnStmt{
+					Arg: &wall.LiteralExprNode{
 						Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
 					},
 				},
@@ -203,20 +213,33 @@ var checkBlocksTests = []checkBlocksTest{
 	{
 		block: &wall.BlockStmt{
 			Stmts: []wall.StmtNode{
-				&wall.ExprStmt{
-					Expr: &wall.LiteralExprNode{
+				&wall.BlockStmt{},
+				&wall.ReturnStmt{
+					Arg: &wall.LiteralExprNode{
 						Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
-					},
-				},
-				&wall.ExprStmt{
-					Expr: &wall.LiteralExprNode{
-						Token: wall.Token{Kind: wall.FLOAT, Content: []byte("1.0")},
 					},
 				},
 			},
 		},
 		returnType: &wall.IdTypeNode{
-			Token: wall.Token{Content: []byte("float")},
+			Token: wall.Token{Content: []byte("int")},
+		},
+	},
+	{
+		block: &wall.BlockStmt{
+			Stmts: []wall.StmtNode{
+				&wall.BlockStmt{},
+				&wall.BlockStmt{
+					Stmts: []wall.StmtNode{&wall.ReturnStmt{
+						Arg: &wall.LiteralExprNode{
+							Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
+						},
+					}},
+				},
+			},
+		},
+		returnType: &wall.IdTypeNode{
+			Token: wall.Token{Content: []byte("int")},
 		},
 	},
 }
@@ -259,16 +282,18 @@ var checkStmtTests = []checkStmtTest{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
-		typeid: wall.INT_TYPE_ID,
+		typeid: wall.UNIT_TYPE_ID,
 	},
 }
 
 func TestCheckStmt(t *testing.T) {
 	for _, test := range checkStmtTests {
 		mod := wall.NewModule()
-		typ, err := wall.CheckStmt(test.stmt, mod.GlobalScope)
-		assert.NoError(t, err)
-		assert.Equal(t, typ, test.typeid)
+		typ, returns, err := wall.CheckStmt(test.stmt, mod.GlobalScope, &wall.MayReturn{TypeId: wall.UNIT_TYPE_ID})
+		if assert.NoError(t, err) {
+			assert.Equal(t, test.typeid, typ)
+			assert.Equal(t, wall.TypeId(-1), returns)
+		}
 	}
 }
 
@@ -455,8 +480,8 @@ func TestCheckVarStmt(t *testing.T) {
 								Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 							},
 						},
-						&wall.ExprStmt{
-							Expr: &wall.LiteralExprNode{
+						&wall.ReturnStmt{
+							Arg: &wall.LiteralExprNode{
 								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
 							},
 						},
