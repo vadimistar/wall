@@ -7,10 +7,12 @@ import (
 )
 
 func Codegen(f *FileNode) llvm.Module {
-	module := llvm.NewModule(f.pos().Filename)
+	context := llvm.NewContext()
+	module := context.NewModule(f.pos().Filename)
 	types := llvmTypes()
 	values := make(map[string]codegenValue)
-	CodegenFile(f, module, types, values)
+	CodegenFileDecls(f, module, types, values)
+	CodegenFileDefs(f, module, types, values)
 	return module
 }
 
@@ -19,9 +21,26 @@ type codegenValue struct {
 	onStack bool
 }
 
-func CodegenFile(f *FileNode, m llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) {
+func CodegenFileDecls(f *FileNode, m llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) {
+	for _, def := range f.Defs {
+		CodegenDecl(def, m, types, values)
+	}
+}
+
+func CodegenFileDefs(f *FileNode, m llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) {
 	for _, def := range f.Defs {
 		CodegenDef(def, m, types, values)
+	}
+}
+
+func CodegenDecl(def DefNode, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) {
+	switch def := def.(type) {
+	case *FunDef:
+		CodegenFunDecl(def, module, types, values)
+	case *ParsedImportDef:
+		CodegenFileDecls(def.ParsedNode, module, types, values)
+	case *StructDef:
+		CodegenStructDef(def, module, types, values)
 	}
 }
 
@@ -30,9 +49,7 @@ func CodegenDef(def DefNode, module llvm.Module, types map[string]llvm.Type, val
 	case *FunDef:
 		CodegenFunDef(def, module, types, values)
 	case *ParsedImportDef:
-		CodegenFile(def.ParsedNode, module, types, values)
-	case *StructDef:
-		CodegenStructDef(def, module, types, values)
+		CodegenFileDefs(def.ParsedNode, module, types, values)
 	}
 }
 
@@ -41,25 +58,37 @@ func CodegenStructDef(s *StructDef, module llvm.Module, types map[string]llvm.Ty
 	for _, field := range s.Fields {
 		llvmTypes = append(llvmTypes, CodegenType(field.Type, types))
 	}
-	structType := llvm.StructType(llvmTypes, false)
+	structType := module.Context().StructType(llvmTypes, false)
 	types[string(s.Name.Content)] = structType
 }
 
-func CodegenFunDef(f *FunDef, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) llvm.Value {
+func CodegenFunDecl(f *FunDef, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) llvm.Value {
 	var paramTypes []llvm.Type
-	var paramNames []string
 	for _, param := range f.Params {
 		paramTypes = append(paramTypes, CodegenType(param.Type, types))
-		paramNames = append(paramNames, string(param.Id.Content))
 	}
-	returnType := llvm.VoidType()
+	returnType := module.Context().VoidType()
 	if f.ReturnType != nil {
 		returnType = CodegenType(f.ReturnType, types)
 	}
 	functionType := llvm.FunctionType(returnType, paramTypes, false)
 	fun := llvm.AddFunction(module, string(f.Id.Content), functionType)
-	bb := llvm.AddBasicBlock(fun, ".entry")
-	builder := llvm.NewBuilder()
+	values[string(f.Id.Content)] = codegenValue{
+		llvm:    fun,
+		onStack: false,
+	}
+	return fun
+}
+
+func CodegenFunDef(f *FunDef, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) llvm.Value {
+	var paramNames []string
+	for _, param := range f.Params {
+		paramNames = append(paramNames, string(param.Id.Content))
+	}
+	fun := values[string(f.Id.Content)].llvm
+	bb := module.Context().AddBasicBlock(fun, ".entry")
+	builder := module.Context().NewBuilder()
+	defer builder.Dispose()
 	builder.SetInsertPointAtEnd(bb)
 	for i, name := range paramNames {
 		values[name] = codegenValue{
@@ -71,7 +100,17 @@ func CodegenFunDef(f *FunDef, module llvm.Module, types map[string]llvm.Type, va
 		builder.CreateRetVoid()
 		return fun
 	}
-	CodegenBlock(f.Body, builder, types, values)
+	returns := false
+	for _, stmt := range f.Body.Stmts {
+		if _, ok := stmt.(*ReturnStmt); ok {
+			returns = true
+		}
+	}
+	if !returns {
+		builder.CreateRetVoid()
+	} else {
+		CodegenBlock(f.Body, builder, types, values)
+	}
 	return fun
 }
 
@@ -146,6 +185,17 @@ func CodegenExpr(expr ExprNode, builder llvm.Builder, types map[string]llvm.Type
 			}
 			return value.llvm
 		}
+	case *CallExprNode:
+		calleeName, err := calleeName(expr.Callee)
+		if err != nil {
+			panic(err)
+		}
+		calleeValue := values[calleeName]
+		args := make([]llvm.Value, 0, len(expr.Args))
+		for _, arg := range expr.Args {
+			args = append(args, CodegenExpr(arg, builder, types, values))
+		}
+		return builder.CreateCall(calleeValue.llvm.GlobalValueType(), calleeValue.llvm, args, tempName())
 	}
 	panic("unreachable")
 }

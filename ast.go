@@ -157,6 +157,11 @@ type LiteralExprNode struct {
 	Token
 }
 
+type CallExprNode struct {
+	Callee ExprNode
+	Args   []ExprNode
+}
+
 func (u UnaryExprNode) pos() Pos {
 	return u.Operator.Pos
 }
@@ -169,11 +174,15 @@ func (g GroupedExprNode) pos() Pos {
 func (l LiteralExprNode) pos() Pos {
 	return l.Token.Pos
 }
+func (c CallExprNode) pos() Pos {
+	return c.Callee.pos()
+}
 
 func (u UnaryExprNode) exprNode()   {}
 func (b BinaryExprNode) exprNode()  {}
 func (g GroupedExprNode) exprNode() {}
 func (l LiteralExprNode) exprNode() {}
+func (c CallExprNode) exprNode()    {}
 
 type TypeNode interface {
 	AstNode

@@ -305,6 +305,8 @@ func CheckExpr(expr ExprNode, scope *Scope) (TypeId, error) {
 		return CheckExpr(expr.Inner, scope)
 	case *LiteralExprNode:
 		return checkLiteralExpr(expr, scope)
+	case *CallExprNode:
+		return checkCallExpr(expr, scope)
 	}
 	panic("unreachable")
 }
@@ -376,6 +378,50 @@ func checkLiteralExpr(expr *LiteralExprNode, scope *Scope) (TypeId, error) {
 		return -1, NewError(expr.pos(), "undeclared: %s", expr.Token.Content)
 	}
 	panic("unimplemented")
+}
+
+func checkCallExpr(expr *CallExprNode, scope *Scope) (TypeId, error) {
+	calleeName, err := calleeName(expr.Callee)
+	if err != nil {
+		return -1, err
+	}
+	argsTypes := make([]TypeId, 0, len(expr.Args))
+	for _, arg := range expr.Args {
+		arg, err := CheckExpr(arg, scope)
+		if err != nil {
+			return -1, err
+		}
+		argsTypes = append(argsTypes, arg)
+	}
+	funTypeId := scope.findFun(calleeName)
+	if funTypeId == nil {
+		return -1, NewError(expr.Callee.pos(), "undeclared callee: %s", calleeName)
+	}
+	funType := scope.Module.Types[*funTypeId].(*FunctionType)
+	if !reflect.DeepEqual(funType.Args, argsTypes) {
+		return -1, NewError(expr.Callee.pos(), "got wrong types of args: expected: %s, got: %s", typeIdsToStrings(funType.Args, scope.Module), typeIdsToStrings(argsTypes, scope.Module))
+	}
+	return funType.Returns, nil
+}
+
+func typeIdsToStrings(ids []TypeId, m *Module) []string {
+	strs := make([]string, 0, len(ids))
+	for _, id := range ids {
+		strs = append(strs, m.typeIdAsStr(id))
+	}
+	return strs
+}
+
+func calleeName(expr ExprNode) (string, error) {
+	switch expr := expr.(type) {
+	case *GroupedExprNode:
+		return calleeName(expr.Inner)
+	case *LiteralExprNode:
+		if expr.Kind == IDENTIFIER {
+			return string(expr.Content), nil
+		}
+	}
+	return "", NewError(expr.pos(), "got a non-callee expression")
 }
 
 func (m *Module) typeIdAsStr(id TypeId) string {
@@ -645,6 +691,16 @@ func (s *Scope) findVar(name string) *TypeId {
 	}
 	if s.Parent != nil {
 		return s.Parent.findVar(name)
+	}
+	return nil
+}
+
+func (s *Scope) findFun(name string) *TypeId {
+	if typeId, ok := s.Funs[name]; ok {
+		return &typeId
+	}
+	if s.Parent != nil {
+		return s.Parent.findFun(name)
 	}
 	return nil
 }

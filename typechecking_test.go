@@ -497,3 +497,55 @@ func TestCheckVarStmt(t *testing.T) {
 	assert.NoError(t, wall.CheckFunctionsSignatures(file, mod))
 	assert.NoError(t, wall.CheckBlocks(file, mod))
 }
+
+func TestCheckCallExpr(t *testing.T) {
+	file := &wall.FileNode{
+		Defs: []wall.DefNode{
+			&wall.FunDef{
+				Id: wall.Token{Content: []byte("sum")},
+				Params: []wall.FunParam{
+					{
+						Id: wall.Token{Content: []byte("a")},
+						Type: &wall.IdTypeNode{
+							Token: wall.Token{Content: []byte("int")},
+						},
+					},
+					{
+						Id: wall.Token{Content: []byte("b")},
+						Type: &wall.IdTypeNode{
+							Token: wall.Token{Content: []byte("int")},
+						},
+					},
+				},
+				ReturnType: &wall.IdTypeNode{Token: wall.Token{Content: []byte("int")}},
+				Body:       &wall.BlockStmt{Stmts: []wall.StmtNode{&wall.ReturnStmt{Arg: &wall.LiteralExprNode{Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")}}}}},
+			},
+			&wall.FunDef{
+				Params:     []wall.FunParam{},
+				ReturnType: nil,
+				Body: &wall.BlockStmt{
+					Stmts: []wall.StmtNode{
+						&wall.ExprStmt{
+							Expr: &wall.CallExprNode{
+								Callee: &wall.LiteralExprNode{
+									Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+								},
+								Args: []wall.ExprNode{
+									&wall.LiteralExprNode{
+										Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+									},
+									&wall.LiteralExprNode{
+										Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	mod := wall.NewModule()
+	assert.NoError(t, wall.CheckFunctionsSignatures(file, mod))
+	assert.NoError(t, wall.CheckBlocks(file, mod))
+}

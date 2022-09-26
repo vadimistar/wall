@@ -288,6 +288,30 @@ func (p *Parser) ParseExpr() (ExprNode, error) {
 	if err != nil {
 		return nil, err
 	}
+	if p.next().Kind == LEFTPAREN {
+		p.advance()
+		args := make([]ExprNode, 0)
+		for p.next().Kind != RIGHTPAREN {
+			arg, err := p.ParseExpr()
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, arg)
+			if p.next().Kind == RIGHTPAREN {
+				break
+			}
+			if _, err := p.match(COMMA); err != nil {
+				return nil, err
+			}
+		}
+		if _, err := p.match(RIGHTPAREN); err != nil {
+			return nil, err
+		}
+		return &CallExprNode{
+			Callee: lhs,
+			Args:   args,
+		}, nil
+	}
 	return p.parseExpr(lhs, 0)
 }
 

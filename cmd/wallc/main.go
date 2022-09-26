@@ -46,13 +46,18 @@ func main() {
 	check(err)
 	llvmModule.Dump()
 	llvm.WriteBitcodeToFile(llvmModule, bytecodeFile)
+	llvmModule.Dispose()
 	// compiling the bytecode to an object file
 	objectFilename := strings.TrimSuffix(options.Source, ".wl") + ".o"
 	llc := exec.Command("llc", "-filetype=obj", "-o", objectFilename, bytecodeFilename)
-	check(llc.Run())
+	output, err := llc.Output()
+	fmt.Printf("%s", output)
+	check(err)
 	// linking
 	ld := exec.Command("gcc", objectFilename, "-o", options.Output)
-	check(ld.Run())
+	output, err = ld.Output()
+	fmt.Printf("%s", output)
+	check(err)
 }
 
 func check(err error) {

@@ -123,6 +123,75 @@ func TestParseGroupedExpr(t *testing.T) {
 	})
 }
 
+type parseCallExprTest struct {
+	tokens []wall.Token
+	node   *wall.CallExprNode
+}
+
+var parseCallExprTests = []parseCallExprTest{
+	{
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER}, {Kind: wall.LEFTPAREN}, {Kind: wall.RIGHTPAREN}},
+		node: &wall.CallExprNode{
+			Callee: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.IDENTIFIER},
+			},
+			Args: []wall.ExprNode{},
+		},
+	},
+	{
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER}, {Kind: wall.LEFTPAREN}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTPAREN}},
+		node: &wall.CallExprNode{
+			Callee: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.IDENTIFIER},
+			},
+			Args: []wall.ExprNode{
+				&wall.LiteralExprNode{
+					Token: wall.Token{Kind: wall.INTEGER},
+				},
+			},
+		},
+	},
+	{
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER}, {Kind: wall.LEFTPAREN}, {Kind: wall.INTEGER}, {Kind: wall.COMMA}, {Kind: wall.RIGHTPAREN}},
+		node: &wall.CallExprNode{
+			Callee: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.IDENTIFIER},
+			},
+			Args: []wall.ExprNode{
+				&wall.LiteralExprNode{
+					Token: wall.Token{Kind: wall.INTEGER},
+				},
+			},
+		},
+	},
+	{
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER}, {Kind: wall.LEFTPAREN}, {Kind: wall.INTEGER}, {Kind: wall.COMMA}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTPAREN}},
+		node: &wall.CallExprNode{
+			Callee: &wall.LiteralExprNode{
+				Token: wall.Token{Kind: wall.IDENTIFIER},
+			},
+			Args: []wall.ExprNode{
+				&wall.LiteralExprNode{
+					Token: wall.Token{Kind: wall.INTEGER},
+				},
+				&wall.LiteralExprNode{
+					Token: wall.Token{Kind: wall.INTEGER},
+				},
+			},
+		},
+	},
+}
+
+func TestParseCallExpr(t *testing.T) {
+	for _, test := range parseCallExprTests {
+		pr := wall.NewParser(test.tokens)
+		expr, err := pr.ParseExprAndEof()
+		if assert.NoError(t, err) {
+			assert.Equal(t, expr, test.node)
+		}
+	}
+}
+
 func TestParseVarStmt(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{{Kind: wall.VAR}, {Kind: wall.IDENTIFIER}, {Kind: wall.EQ}, {Kind: wall.INTEGER}})
 	stmt, err := pr.ParseStmtAndEof()
