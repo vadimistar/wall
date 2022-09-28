@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-func ParseFile(filename string, source []byte) (*FileNode, error) {
+func ParseFile(filename string, source []byte) (*ParsedFile, error) {
 	tokens, err := ScanTokens(filename, source)
 	if err != nil {
 		return nil, err
@@ -32,21 +32,21 @@ func NewParser(tokens []Token) Parser {
 	}
 }
 
-func ParseCompilationUnit(filename string, source []byte) (*FileNode, error) {
+func ParseCompilationUnit(filename string, source []byte) (*ParsedFile, error) {
 	file, err := ParseFile(filename, source)
 	if err != nil {
 		return nil, err
 	}
-	if err := resolveImports(file, make(map[string]*FileNode)); err != nil {
+	if err := resolveImports(file, make(map[string]*ParsedFile)); err != nil {
 		return nil, err
 	}
 	return file, nil
 }
 
-func resolveImports(file *FileNode, parsedModules map[string]*FileNode) error {
+func resolveImports(file *ParsedFile, parsedModules map[string]*ParsedFile) error {
 	for i, def := range file.Defs {
 		switch importDef := def.(type) {
-		case *ImportDef:
+		case *ParsedImport:
 			resolvedImport, err := resolveImport(importDef, parsedModules)
 			if err != nil {
 				return err
@@ -57,16 +57,17 @@ func resolveImports(file *FileNode, parsedModules map[string]*FileNode) error {
 	return nil
 }
 
-func resolveImport(def *ImportDef, parsedModules map[string]*FileNode) (*ParsedImportDef, error) {
+func resolveImport(def *ParsedImport, parsedModules map[string]*ParsedFile) (*ParsedImport, error) {
 	importedFilename := filepath.Join(filepath.Dir(def.Import.Filename), moduleToFilename(string(def.Name.Content)))
 	absImportedFilename, err := filepath.Abs(importedFilename)
 	if err != nil {
 		return nil, err
 	}
 	if module, ok := parsedModules[absImportedFilename]; ok {
-		return &ParsedImportDef{
-			ImportDef:  *def,
-			ParsedNode: module,
+		return &ParsedImport{
+			Import: def.Import,
+			Name:   def.Name,
+			File:   module,
 		}, nil
 	}
 	source, err := os.ReadFile(importedFilename)
@@ -81,9 +82,10 @@ func resolveImport(def *ImportDef, parsedModules map[string]*FileNode) (*ParsedI
 	if err := resolveImports(parsedFile, parsedModules); err != nil {
 		return nil, err
 	}
-	return &ParsedImportDef{
-		ImportDef:  *def,
-		ParsedNode: parsedFile,
+	return &ParsedImport{
+		Import: def.Import,
+		Name:   def.Name,
+		File:   parsedFile,
 	}, nil
 }
 
@@ -92,8 +94,8 @@ func moduleToFilename(name string) string {
 	return name + WALL_EXTENSION
 }
 
-func (p *Parser) ParseFile() (*FileNode, error) {
-	defs := make([]DefNode, 0)
+func (p *Parser) ParseFile() (*ParsedFile, error) {
+	defs := make([]ParsedDef, 0)
 	for p.next().Kind != EOF {
 		if p.next().Kind == NEWLINE {
 			p.advance()
@@ -110,12 +112,12 @@ func (p *Parser) ParseFile() (*FileNode, error) {
 		}
 	}
 	_ = p.advance()
-	return &FileNode{
+	return &ParsedFile{
 		Defs: defs,
 	}, nil
 }
 
-func (p *Parser) ParseStmtOrDefAndEof() (AstNode, error) {
+func (p *Parser) ParseStmtOrDefAndEof() (ParsedNode, error) {
 	switch p.next().Kind {
 	case FUN, IMPORT, STRUCT:
 		return p.ParseDefAndEof()
@@ -124,7 +126,7 @@ func (p *Parser) ParseStmtOrDefAndEof() (AstNode, error) {
 	}
 }
 
-func (p *Parser) ParseDef() (DefNode, error) {
+func (p *Parser) ParseDef() (ParsedDef, error) {
 	switch p.next().Kind {
 	case FUN:
 		fun := p.advance()
@@ -136,7 +138,7 @@ func (p *Parser) ParseDef() (DefNode, error) {
 		if err != nil {
 			return nil, err
 		}
-		var returnType TypeNode = nil
+		var returnType ParsedType = nil
 		if p.next().Kind != LEFTBRACE {
 			returnType, err = p.parseType()
 			if err != nil {
@@ -147,7 +149,7 @@ func (p *Parser) ParseDef() (DefNode, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &FunDef{
+		return &ParsedFunDef{
 			Fun:        fun,
 			Id:         id,
 			Params:     params,
@@ -160,7 +162,7 @@ func (p *Parser) ParseDef() (DefNode, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &ImportDef{
+		return &ParsedImport{
 			Import: kw,
 			Name:   name,
 		}, nil
@@ -174,7 +176,7 @@ func (p *Parser) ParseDef() (DefNode, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &StructDef{
+		return &ParsedStructDef{
 			Struct: kw,
 			Name:   name,
 			Fields: fields,
@@ -183,7 +185,7 @@ func (p *Parser) ParseDef() (DefNode, error) {
 	return nil, NewError(p.next().Pos, "expected definition, but got %s", p.next().Kind)
 }
 
-func (p *Parser) ParseDefAndEof() (DefNode, error) {
+func (p *Parser) ParseDefAndEof() (ParsedDef, error) {
 	def, err := p.ParseDef()
 	if err != nil {
 		return nil, err
@@ -195,7 +197,7 @@ func (p *Parser) ParseDefAndEof() (DefNode, error) {
 	return def, nil
 }
 
-func (p *Parser) ParseStmt() (StmtNode, error) {
+func (p *Parser) ParseStmt() (ParsedStmt, error) {
 	switch p.next().Kind {
 	case VAR:
 		varToken := p.advance()
@@ -211,7 +213,7 @@ func (p *Parser) ParseStmt() (StmtNode, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &VarStmt{
+		return &ParsedVar{
 			Var:   varToken,
 			Id:    id,
 			Eq:    eq,
@@ -224,12 +226,12 @@ func (p *Parser) ParseStmt() (StmtNode, error) {
 			if err != nil {
 				return nil, err
 			}
-			return &ReturnStmt{
+			return &ParsedReturn{
 				Return: kw,
 				Arg:    arg,
 			}, nil
 		}
-		return &ReturnStmt{
+		return &ParsedReturn{
 			Return: kw,
 			Arg:    nil,
 		}, nil
@@ -240,14 +242,14 @@ func (p *Parser) ParseStmt() (StmtNode, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &ExprStmt{
+	return &ParsedExprStmt{
 		Expr: expr,
 	}, nil
 }
 
-func (p *Parser) parseBlock() (*BlockStmt, error) {
+func (p *Parser) parseBlock() (*ParsedBlock, error) {
 	left := p.advance()
-	stmts := make([]StmtNode, 0)
+	stmts := make([]ParsedStmt, 0)
 	for p.next().Kind != RIGHTBRACE {
 		if p.next().Kind == NEWLINE {
 			p.advance()
@@ -264,14 +266,14 @@ func (p *Parser) parseBlock() (*BlockStmt, error) {
 		}
 	}
 	right := p.advance()
-	return &BlockStmt{
+	return &ParsedBlock{
 		Left:  left,
 		Stmts: stmts,
 		Right: right,
 	}, nil
 }
 
-func (p *Parser) ParseStmtAndEof() (StmtNode, error) {
+func (p *Parser) ParseStmtAndEof() (ParsedStmt, error) {
 	stmt, err := p.ParseStmt()
 	if err != nil {
 		return nil, err
@@ -283,14 +285,14 @@ func (p *Parser) ParseStmtAndEof() (StmtNode, error) {
 	return stmt, nil
 }
 
-func (p *Parser) ParseExpr() (ExprNode, error) {
+func (p *Parser) ParseExpr() (ParsedExpr, error) {
 	lhs, err := p.parsePrimary()
 	if err != nil {
 		return nil, err
 	}
 	if p.next().Kind == LEFTPAREN {
 		p.advance()
-		args := make([]ExprNode, 0)
+		args := make([]ParsedExpr, 0)
 		for p.next().Kind != RIGHTPAREN {
 			arg, err := p.ParseExpr()
 			if err != nil {
@@ -307,7 +309,7 @@ func (p *Parser) ParseExpr() (ExprNode, error) {
 		if _, err := p.match(RIGHTPAREN); err != nil {
 			return nil, err
 		}
-		return &CallExprNode{
+		return &ParsedCallExpr{
 			Callee: lhs,
 			Args:   args,
 		}, nil
@@ -315,7 +317,7 @@ func (p *Parser) ParseExpr() (ExprNode, error) {
 	return p.parseExpr(lhs, 0)
 }
 
-func (p *Parser) ParseExprAndEof() (ExprNode, error) {
+func (p *Parser) ParseExprAndEof() (ParsedExpr, error) {
 	expr, err := p.ParseExpr()
 	if err != nil {
 		return nil, err
@@ -327,7 +329,7 @@ func (p *Parser) ParseExprAndEof() (ExprNode, error) {
 	return expr, nil
 }
 
-func (p *Parser) parseExpr(lhs ExprNode, minPrec int) (ExprNode, error) {
+func (p *Parser) parseExpr(lhs ParsedExpr, minPrec int) (ParsedExpr, error) {
 	for precedence(p.next().Kind) >= minPrec {
 		op := p.advance()
 		rhs, err := p.parsePrimary()
@@ -347,7 +349,7 @@ func (p *Parser) parseExpr(lhs ExprNode, minPrec int) (ExprNode, error) {
 			}
 			next = p.next()
 		}
-		lhs = &BinaryExprNode{
+		lhs = &ParsedBinaryExpr{
 			Left:  lhs,
 			Op:    op,
 			Right: rhs,
@@ -372,11 +374,11 @@ func precedence(t TokenKind) int {
 	return -1
 }
 
-func (p *Parser) parsePrimary() (ExprNode, error) {
+func (p *Parser) parsePrimary() (ParsedExpr, error) {
 	switch t := p.next(); t.Kind {
 	case IDENTIFIER, INTEGER, FLOAT:
 		t := p.advance()
-		return &LiteralExprNode{Token: t}, nil
+		return &ParsedLiteralExpr{Token: t}, nil
 	case LEFTPAREN:
 		left := p.advance()
 		inner, err := p.ParseExpr()
@@ -387,7 +389,7 @@ func (p *Parser) parsePrimary() (ExprNode, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &GroupedExprNode{
+		return &ParsedGroupedExpr{
 			Left:  left,
 			Inner: inner,
 			Right: right,
@@ -398,7 +400,7 @@ func (p *Parser) parsePrimary() (ExprNode, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &UnaryExprNode{
+		return &ParsedUnaryExpr{
 			Operator: operator,
 			Operand:  operand,
 		}, nil
@@ -428,8 +430,8 @@ func (p *Parser) match(k TokenKind) (Token, error) {
 	return t, nil
 }
 
-func (p *Parser) parseFunParams() (params []FunParam, err error) {
-	params = make([]FunParam, 0)
+func (p *Parser) parseFunParams() (params []ParsedFunParam, err error) {
+	params = make([]ParsedFunParam, 0)
 	_, err = p.match(LEFTPAREN)
 	if err != nil {
 		return params, err
@@ -443,7 +445,7 @@ func (p *Parser) parseFunParams() (params []FunParam, err error) {
 		if err != nil {
 			return params, err
 		}
-		params = append(params, FunParam{
+		params = append(params, ParsedFunParam{
 			Id:   id,
 			Type: typ,
 		})
@@ -463,23 +465,23 @@ func (p *Parser) parseFunParams() (params []FunParam, err error) {
 	return params, nil
 }
 
-func (p *Parser) parseType() (TypeNode, error) {
+func (p *Parser) parseType() (ParsedType, error) {
 	switch p.next().Kind {
 	case IDENTIFIER:
 		tok := p.advance()
-		return &IdTypeNode{
+		return &ParsedIdType{
 			Token: tok,
 		}, nil
 	}
 	return nil, NewError(p.next().Pos, "expected type, but got %s", p.next().Kind)
 }
 
-func (p *Parser) parseStructBody() (fields []StructField, err error) {
+func (p *Parser) parseStructBody() (fields []ParsedStructField, err error) {
 	_, err = p.match(LEFTBRACE)
 	if err != nil {
 		return fields, err
 	}
-	fields = make([]StructField, 0)
+	fields = make([]ParsedStructField, 0)
 	for p.next().Kind != RIGHTBRACE {
 		if p.next().Kind == NEWLINE {
 			p.advance()
@@ -493,7 +495,7 @@ func (p *Parser) parseStructBody() (fields []StructField, err error) {
 		if err != nil {
 			return fields, err
 		}
-		fields = append(fields, StructField{
+		fields = append(fields, ParsedStructField{
 			Name: name,
 			Type: typ,
 		})

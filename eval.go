@@ -26,47 +26,47 @@ func NewEvaluator() Evaluator {
 	}
 }
 
-func (e *Evaluator) EvaluateNode(node AstNode) (EvalObject, error) {
+func (e *Evaluator) EvaluateNode(node ParsedNode) (EvalObject, error) {
 	switch nd := node.(type) {
-	case StmtNode:
+	case ParsedStmt:
 		return e.EvaluateStmt(nd)
-	case ExprNode:
+	case ParsedExpr:
 		return e.EvaluateExpr(nd)
-	case DefNode:
+	case ParsedDef:
 		return e.EvaluateDef(nd)
 	}
 	panic(fmt.Sprintf("unreachable: %T", node))
 }
 
-func (e *Evaluator) EvaluateStmt(stmt StmtNode) (EvalObject, error) {
+func (e *Evaluator) EvaluateStmt(stmt ParsedStmt) (EvalObject, error) {
 	switch st := stmt.(type) {
-	case *VarStmt:
+	case *ParsedVar:
 		return e.evaluateVarStmt(st)
-	case *ExprStmt:
+	case *ParsedExprStmt:
 		return e.evaluateExprStmt(st)
-	case *BlockStmt:
+	case *ParsedBlock:
 		return e.evaluateBlockStmt(st)
 	}
 	panic(fmt.Sprintf("unreachable: %T", stmt))
 }
 
-func (e *Evaluator) EvaluateExpr(expr ExprNode) (EvalObject, error) {
+func (e *Evaluator) EvaluateExpr(expr ParsedExpr) (EvalObject, error) {
 	switch ex := expr.(type) {
-	case *UnaryExprNode:
+	case *ParsedUnaryExpr:
 		return e.evaluateUnaryExpr(ex)
-	case *BinaryExprNode:
+	case *ParsedBinaryExpr:
 		return e.evaluateBinaryExpr(ex)
-	case *LiteralExprNode:
+	case *ParsedLiteralExpr:
 		return e.evaluateLiteralExpr(ex)
-	case *GroupedExprNode:
+	case *ParsedGroupedExpr:
 		return e.evaluateGroupedExpr(ex)
 	}
 	panic(fmt.Sprintf("unreachable: %T", expr))
 }
 
-func (e *Evaluator) EvaluateDef(def DefNode) (EvalObject, error) {
+func (e *Evaluator) EvaluateDef(def ParsedDef) (EvalObject, error) {
 	switch df := def.(type) {
-	case *FunDef:
+	case *ParsedFunDef:
 		return e.evaluateFunDef(df)
 	}
 	panic(fmt.Sprintf("unreachable: %T", def))
@@ -89,7 +89,7 @@ type FloatObject struct {
 
 type FunObject struct {
 	Arity int
-	Node  *FunDef
+	Node  *ParsedFunDef
 }
 
 func (u UnitObject) evalObject()  {}
@@ -110,7 +110,7 @@ func (f *FunObject) String() string {
 	return fmt.Sprintf("<function arity:%d node:%x>", f.Arity, &f.Node)
 }
 
-func (e *Evaluator) evaluateUnaryExpr(u *UnaryExprNode) (EvalObject, error) {
+func (e *Evaluator) evaluateUnaryExpr(u *ParsedUnaryExpr) (EvalObject, error) {
 	operand, err := e.EvaluateExpr(u.Operand)
 	if err != nil {
 		return nil, err
@@ -129,7 +129,7 @@ func (e *Evaluator) evaluateUnaryExpr(u *UnaryExprNode) (EvalObject, error) {
 	return nil, NewError(u.Operator.Pos, "operator %s is not implemented for %T", u.Operator.Kind, operand)
 }
 
-func (e *Evaluator) evaluateBinaryExpr(b *BinaryExprNode) (EvalObject, error) {
+func (e *Evaluator) evaluateBinaryExpr(b *ParsedBinaryExpr) (EvalObject, error) {
 	if b.Op.Kind == EQ {
 		return e.evaluateAssignExpr(b)
 	}
@@ -184,11 +184,11 @@ func (e *Evaluator) evaluateBinaryExpr(b *BinaryExprNode) (EvalObject, error) {
 	return nil, NewError(b.Op.Pos, "operator %s is not implemented for types %T and %T", b.Op.Kind, left, right)
 }
 
-func (e *Evaluator) evaluateAssignExpr(b *BinaryExprNode) (EvalObject, error) {
-	if reflect.TypeOf(b.Left) != reflect.TypeOf(&LiteralExprNode{}) {
+func (e *Evaluator) evaluateAssignExpr(b *ParsedBinaryExpr) (EvalObject, error) {
+	if reflect.TypeOf(b.Left) != reflect.TypeOf(&ParsedLiteralExpr{}) {
 		return nil, NewError(b.Left.pos(), "can't assign not to id")
 	}
-	left := b.Left.(*LiteralExprNode)
+	left := b.Left.(*ParsedLiteralExpr)
 	if left.Token.Kind != IDENTIFIER {
 		return nil, NewError(b.Left.pos(), "can't assign not to id: %s", left.Token.Content)
 	}
@@ -204,7 +204,7 @@ func (e *Evaluator) evaluateAssignExpr(b *BinaryExprNode) (EvalObject, error) {
 	return nil, NewError(left.pos(), "not declared: %s", id)
 }
 
-func (e *Evaluator) evaluateLiteralExpr(b *LiteralExprNode) (EvalObject, error) {
+func (e *Evaluator) evaluateLiteralExpr(b *ParsedLiteralExpr) (EvalObject, error) {
 	switch b.Token.Kind {
 	case IDENTIFIER:
 		if val, ok := e.lookupVar(string(b.Token.Content)); ok {
@@ -227,11 +227,11 @@ func (e *Evaluator) evaluateLiteralExpr(b *LiteralExprNode) (EvalObject, error) 
 	panic("unreachable")
 }
 
-func (e *Evaluator) evaluateGroupedExpr(b *GroupedExprNode) (EvalObject, error) {
+func (e *Evaluator) evaluateGroupedExpr(b *ParsedGroupedExpr) (EvalObject, error) {
 	return e.EvaluateExpr(b.Inner)
 }
 
-func (e *Evaluator) evaluateVarStmt(stmt *VarStmt) (EvalObject, error) {
+func (e *Evaluator) evaluateVarStmt(stmt *ParsedVar) (EvalObject, error) {
 	val, err := e.EvaluateExpr(stmt.Value)
 	if err != nil {
 		return nil, err
@@ -240,11 +240,11 @@ func (e *Evaluator) evaluateVarStmt(stmt *VarStmt) (EvalObject, error) {
 	return &UnitObject{}, nil
 }
 
-func (e *Evaluator) evaluateExprStmt(stmt *ExprStmt) (EvalObject, error) {
+func (e *Evaluator) evaluateExprStmt(stmt *ParsedExprStmt) (EvalObject, error) {
 	return e.EvaluateExpr(stmt.Expr)
 }
 
-func (e *Evaluator) evaluateBlockStmt(block *BlockStmt) (EvalObject, error) {
+func (e *Evaluator) evaluateBlockStmt(block *ParsedBlock) (EvalObject, error) {
 	if len(block.Stmts) == 0 {
 		return &UnitObject{}, nil
 	}
@@ -292,7 +292,7 @@ func (e *Evaluator) popScope() {
 	e.scopes = e.scopes[:len(e.scopes)-1]
 }
 
-func (e *Evaluator) evaluateFunDef(f *FunDef) (EvalObject, error) {
+func (e *Evaluator) evaluateFunDef(f *ParsedFunDef) (EvalObject, error) {
 	arity := len(f.Params)
 	obj := &FunObject{
 		Arity: arity,
@@ -329,9 +329,9 @@ func (e *Evaluator) evaluateFunDef(f *FunDef) (EvalObject, error) {
 	return obj, nil
 }
 
-func (e *Evaluator) defaultValue(t TypeNode) (EvalObject, error) {
+func (e *Evaluator) defaultValue(t ParsedType) (EvalObject, error) {
 	switch tt := t.(type) {
-	case *IdTypeNode:
+	case *ParsedIdType:
 		switch string(tt.Token.Content) {
 		case "int":
 			return &IntObject{}, nil

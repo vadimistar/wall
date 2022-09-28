@@ -2,224 +2,399 @@ package wall
 
 import (
 	"fmt"
-
-	"tinygo.org/x/go-llvm"
+	"path/filepath"
+	"strings"
 )
 
-func Codegen(f *FileNode) llvm.Module {
-	context := llvm.NewContext()
-	module := context.NewModule(f.pos().Filename)
-	types := llvmTypes()
-	values := make(map[string]codegenValue)
-	CodegenFileDecls(f, module, types, values)
-	CodegenFileDefs(f, module, types, values)
-	return module
+func Codegen(f *ParsedFile) string {
+	WallPrefixesToGlobalNames(f)
+	var result strings.Builder
+	fmt.Fprintf(&result, "/* source filename: %s */\n", f.pos().Filename)
+	result.WriteString("/* type declarations */\n")
+	result.WriteString(CodegenTypeDeclarations(f))
+	result.WriteString("/* function declarations */\n")
+	result.WriteString(CodegenFuncDeclarations(f))
+	result.WriteString("/* type definitions */\n")
+	result.WriteString(CodegenTypeDefinitions(f))
+	result.WriteString("/* function definitions */\n")
+	result.WriteString(CodegenFuncDefinitions(f))
+	return result.String()
 }
 
-type codegenValue struct {
-	llvm    llvm.Value
-	onStack bool
-}
-
-func CodegenFileDecls(f *FileNode, m llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) {
+func WallPrefixesToGlobalNames(f *ParsedFile) {
 	for _, def := range f.Defs {
-		CodegenDecl(def, m, types, values)
-	}
-}
-
-func CodegenFileDefs(f *FileNode, m llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) {
-	for _, def := range f.Defs {
-		CodegenDef(def, m, types, values)
-	}
-}
-
-func CodegenDecl(def DefNode, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) {
-	switch def := def.(type) {
-	case *FunDef:
-		CodegenFunDecl(def, module, types, values)
-	case *ParsedImportDef:
-		CodegenFileDecls(def.ParsedNode, module, types, values)
-	case *StructDef:
-		CodegenStructDef(def, module, types, values)
-	}
-}
-
-func CodegenDef(def DefNode, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) {
-	switch def := def.(type) {
-	case *FunDef:
-		CodegenFunDef(def, module, types, values)
-	case *ParsedImportDef:
-		CodegenFileDefs(def.ParsedNode, module, types, values)
-	}
-}
-
-func CodegenStructDef(s *StructDef, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) {
-	var llvmTypes []llvm.Type
-	for _, field := range s.Fields {
-		llvmTypes = append(llvmTypes, CodegenType(field.Type, types))
-	}
-	structType := module.Context().StructType(llvmTypes, false)
-	types[string(s.Name.Content)] = structType
-}
-
-func CodegenFunDecl(f *FunDef, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) llvm.Value {
-	var paramTypes []llvm.Type
-	for _, param := range f.Params {
-		paramTypes = append(paramTypes, CodegenType(param.Type, types))
-	}
-	returnType := module.Context().VoidType()
-	if f.ReturnType != nil {
-		returnType = CodegenType(f.ReturnType, types)
-	}
-	functionType := llvm.FunctionType(returnType, paramTypes, false)
-	fun := llvm.AddFunction(module, string(f.Id.Content), functionType)
-	values[string(f.Id.Content)] = codegenValue{
-		llvm:    fun,
-		onStack: false,
-	}
-	return fun
-}
-
-func CodegenFunDef(f *FunDef, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) llvm.Value {
-	var paramNames []string
-	for _, param := range f.Params {
-		paramNames = append(paramNames, string(param.Id.Content))
-	}
-	fun := values[string(f.Id.Content)].llvm
-	bb := module.Context().AddBasicBlock(fun, ".entry")
-	builder := module.Context().NewBuilder()
-	defer builder.Dispose()
-	builder.SetInsertPointAtEnd(bb)
-	for i, name := range paramNames {
-		values[name] = codegenValue{
-			llvm:    fun.Param(i),
-			onStack: false,
+		if _, ok := def.(*ParsedImport); ok {
+			moduleNamesToGlobalNames(f, make(map[*ParsedFile]struct{}))
+			break
 		}
 	}
-	if len(f.Body.Stmts) == 0 {
-		builder.CreateRetVoid()
-		return fun
-	}
-	returns := false
-	for _, stmt := range f.Body.Stmts {
-		if _, ok := stmt.(*ReturnStmt); ok {
-			returns = true
-		}
-	}
-	if !returns {
-		builder.CreateRetVoid()
-	} else {
-		CodegenBlock(f.Body, builder, types, values)
-	}
-	return fun
+	wallPrefixesToGlobalNames(f, make(map[*ParsedFile]struct{}))
 }
 
-func CodegenBlock(block *BlockStmt, builder llvm.Builder, types map[string]llvm.Type, values map[string]codegenValue) {
-	for _, stmt := range block.Stmts {
-		CodegenStmt(stmt, builder, types, values)
-	}
+func CodegenTypeDeclarations(f *ParsedFile) string {
+	return codegenTypeDeclarations(f, make(map[*ParsedFile]struct{}))
 }
 
-func CodegenStmt(stmt StmtNode, builder llvm.Builder, types map[string]llvm.Type, values map[string]codegenValue) {
+func CodegenFuncDeclarations(f *ParsedFile) string {
+	return codegenFuncDeclarations(f, make(map[*ParsedFile]struct{}))
+}
+
+func CodegenTypeDefinitions(f *ParsedFile) string {
+	return codegenTypeDefinitions(f, make(map[*ParsedFile]struct{}))
+}
+
+func CodegenFuncDefinitions(f *ParsedFile) string {
+	return codegenFuncDefinitions(f, make(map[*ParsedFile]struct{}))
+}
+
+func CodegenStmt(stmt ParsedStmt) string {
+	// func (v *VarStmt) stmtNode()    {}
+	// func (e *ExprStmt) stmtNode()   {}
+	// func (b *BlockStmt) stmtNode()  {}
+	// func (r *ReturnStmt) stmtNode() {}
+
 	switch stmt := stmt.(type) {
-	case *VarStmt:
-		value := CodegenExpr(stmt.Value, builder, types, values)
-		alloca := builder.CreateAlloca(value.Type(), string(stmt.Id.Content))
-		builder.CreateStore(value, alloca)
-		values[string(stmt.Id.Content)] = codegenValue{
-			llvm:    alloca,
-			onStack: true,
+	case *ParsedVar:
+		return codegenVarStmt(stmt)
+	}
+	panic("unimplemented")
+}
+
+func codegenVarStmt(stmt *ParsedVar) string {
+	panic("unimplemented")
+}
+
+func codegenFuncDefinitions(f *ParsedFile, generatedModules map[*ParsedFile]struct{}) string {
+	if _, ok := generatedModules[f]; ok {
+		return ""
+	}
+	generatedModules[f] = struct{}{}
+	var builder strings.Builder
+	for _, def := range f.Defs {
+		switch def := def.(type) {
+		case *ParsedImport:
+			builder.WriteString(codegenFuncDeclarations(def.File, generatedModules))
+		case *ParsedFunDef:
+			builder.WriteString(codegenFunDef(def, generatedModules))
 		}
-	case *ExprStmt:
-		CodegenExpr(stmt.Expr, builder, types, values)
-	case *BlockStmt:
-		CodegenBlock(stmt, builder, types, values)
-	case *ReturnStmt:
-		if stmt.Arg != nil {
-			arg := CodegenExpr(stmt.Arg, builder, types, values)
-			builder.CreateRet(arg)
-		} else {
-			builder.CreateRetVoid()
+	}
+	return builder.String()
+}
+
+func codegenFunDef(def *ParsedFunDef, generatedModules map[*ParsedFile]struct{}) string {
+	var builder strings.Builder
+	fmt.Fprintf(&builder, "%s %s(", CodegenType(def.ReturnType), cId(string(def.id())))
+	for i, param := range def.Params {
+		fmt.Fprintf(&builder, "%s %s", CodegenType(param.Type), cId(string(param.Id.Content)))
+		if i < len(def.Params)-1 {
+			builder.WriteString(", ")
 		}
-	default:
-		panic("unreachable")
+	}
+	builder.WriteString(") ")
+	builder.WriteString(codegenBlock(def.Body))
+	return builder.String()
+}
+
+func codegenBlock(block *ParsedBlock) string {
+	var builder strings.Builder
+	builder.WriteString("{\n")
+	for _, stmt := range block.Stmts {
+		builder.WriteString(CodegenStmt(stmt))
+	}
+	builder.WriteString("}\n")
+	return builder.String()
+}
+
+func wallPrefixesToGlobalNames(f *ParsedFile, generatedModules map[*ParsedFile]struct{}) {
+	if _, ok := generatedModules[f]; ok {
+		return
+	}
+	generatedModules[f] = struct{}{}
+	for _, def := range f.Defs {
+		switch def := def.(type) {
+		case *ParsedStructDef:
+			def.Name.Content = attachWallPrefix(def.Name.Content)
+		case *ParsedFunDef:
+			def.Id.Content = attachWallPrefix(def.Id.Content)
+		}
 	}
 }
 
-func CodegenExpr(expr ExprNode, builder llvm.Builder, types map[string]llvm.Type, values map[string]codegenValue) llvm.Value {
-	switch expr := expr.(type) {
-	case *UnaryExprNode:
-		switch expr.Operator.Kind {
-		case PLUS:
-			return CodegenExpr(expr.Operand, builder, types, values)
-		case MINUS:
-			operand := CodegenExpr(expr.Operand, builder, types, values)
-			return builder.CreateNeg(operand, tempName())
+func moduleNamesToGlobalNames(f *ParsedFile, generatedModules map[*ParsedFile]struct{}) {
+	if _, ok := generatedModules[f]; ok {
+		return
+	}
+	generatedModules[f] = struct{}{}
+	for _, def := range f.Defs {
+		switch def := def.(type) {
+		case *ParsedStructDef:
+			def.Name.Content = attachModuleName(def.Name.Content, def.Name.Filename)
+		case *ParsedFunDef:
+			def.Id.Content = attachModuleName(def.Id.Content, def.Id.Filename)
 		}
-	case *BinaryExprNode:
-		left := CodegenExpr(expr.Left, builder, types, values)
-		right := CodegenExpr(expr.Left, builder, types, values)
-		switch expr.Op.Kind {
-		case PLUS:
-			return builder.CreateAdd(left, right, tempName())
-		case MINUS:
-			return builder.CreateSub(left, right, tempName())
-		case STAR:
-			return builder.CreateMul(left, right, tempName())
-		case SLASH:
-			return builder.CreateSDiv(left, right, tempName())
+	}
+}
+
+func attachModuleName(name []byte, filename string) []byte {
+	return []byte(strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename)) + "_" + string(name))
+}
+
+func attachWallPrefix(name []byte) []byte {
+	return []byte("WALL_" + string(name))
+}
+
+func codegenTypeDeclarations(f *ParsedFile, generatedModules map[*ParsedFile]struct{}) string {
+	if _, ok := generatedModules[f]; ok {
+		return ""
+	}
+	generatedModules[f] = struct{}{}
+	var builder strings.Builder
+	for _, def := range f.Defs {
+		switch def := def.(type) {
+		case *ParsedImport:
+			builder.WriteString(codegenTypeDeclarations(def.File, generatedModules))
+		case *ParsedStructDef:
+			id := cId(string(def.id()))
+			fmt.Fprintf(&builder, "typedef struct %s %s", id, id)
 		}
-	case *GroupedExprNode:
-		return CodegenExpr(expr.Inner, builder, types, values)
-	case *LiteralExprNode:
-		switch expr.Token.Kind {
-		case INTEGER:
-			return llvm.ConstIntFromString(llvm.Int64Type(), string(expr.Token.Content), 10)
-		case FLOAT:
-			return llvm.ConstFloatFromString(llvm.DoubleType(), string(expr.Token.Content))
-		case IDENTIFIER:
-			value := values[string(expr.Token.Content)]
-			if value.onStack {
-				loaded := builder.CreateLoad(value.llvm.AllocatedType(), value.llvm, tempName())
-				return loaded
+	}
+	return builder.String()
+}
+
+func codegenFuncDeclarations(f *ParsedFile, generatedModules map[*ParsedFile]struct{}) string {
+	if _, ok := generatedModules[f]; ok {
+		return ""
+	}
+	generatedModules[f] = struct{}{}
+	var builder strings.Builder
+	for _, def := range f.Defs {
+		switch def := def.(type) {
+		case *ParsedImport:
+			builder.WriteString(codegenFuncDeclarations(def.File, generatedModules))
+		case *ParsedFunDef:
+			fmt.Fprintf(&builder, "%s %s(", CodegenType(def.ReturnType), cId(string(def.id())))
+			for i, param := range def.Params {
+				fmt.Fprintf(&builder, "%s", CodegenType(param.Type))
+				if i < len(def.Params)-1 {
+					builder.WriteString(", ")
+				}
 			}
-			return value.llvm
+			builder.WriteString(");\n")
 		}
-	case *CallExprNode:
-		calleeName, err := calleeName(expr.Callee)
-		if err != nil {
-			panic(err)
+	}
+	return builder.String()
+}
+
+func codegenTypeDefinitions(f *ParsedFile, generatedModules map[*ParsedFile]struct{}) string {
+	if _, ok := generatedModules[f]; ok {
+		return ""
+	}
+	generatedModules[f] = struct{}{}
+	var builder strings.Builder
+	for _, def := range f.Defs {
+		switch def := def.(type) {
+		case *ParsedImport:
+			builder.WriteString(codegenTypeDefinitions(def.File, generatedModules))
+		case *ParsedStructDef:
+			builder.WriteString(CodegenStructDef(cId(string(def.id())), def.Fields))
 		}
-		calleeValue := values[calleeName]
-		args := make([]llvm.Value, 0, len(expr.Args))
-		for _, arg := range expr.Args {
-			args = append(args, CodegenExpr(arg, builder, types, values))
-		}
-		return builder.CreateCall(calleeValue.llvm.GlobalValueType(), calleeValue.llvm, args, tempName())
 	}
-	panic("unreachable")
+	return builder.String()
 }
 
-func CodegenType(t TypeNode, types map[string]llvm.Type) llvm.Type {
-	switch t := t.(type) {
-	case *IdTypeNode:
-		return types[string(t.Content)]
-	default:
-		panic("unreachable")
+func CodegenStructDef(id string, fields []ParsedStructField) string {
+	var builder strings.Builder
+	fmt.Fprintf(&builder, "struct %s {\n", id)
+	for _, field := range fields {
+		fmt.Fprintf(&builder, "%s %s;\n", CodegenType(field.Type), field.Name)
 	}
+	builder.WriteString("};\n")
+	return builder.String()
 }
 
-func llvmTypes() map[string]llvm.Type {
-	return map[string]llvm.Type{
-		"()":    llvm.VoidType(),
-		"int":   llvm.Int64Type(),
-		"float": llvm.DoubleType(),
-	}
+func CodegenType(t ParsedType) string {
+	panic("todo")
 }
 
-var tempsCount = 0
-
-func tempName() string {
-	tempsCount++
-	return fmt.Sprintf(".tmp%d", tempsCount)
+func cId(id string) string {
+	return fmt.Sprintf("WALL_%s", id)
 }
+
+// 	case *StructDef:
+// 		CodegenStructDef(def, module, types, values)
+// 	case *FunDef:
+// 		CodegenFunDecl(def, module, types, values)
+// 		CodegenFunDef(def, module, types, values)
+// 	}
+// }
+
+// func CodegenStructDef(s *StructDef, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) {
+// 	var llvmTypes []llvm.Type
+// 	for _, field := range s.Fields {
+// 		llvmTypes = append(llvmTypes, CodegenType(field.Type, types))
+// 	}
+// 	structType := module.Context().StructType(llvmTypes, false)
+// 	types[string(s.Name.Content)] = structType
+// }
+
+// func CodegenFunDecl(f *FunDef, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) llvm.Value {
+// 	var paramTypes []llvm.Type
+// 	for _, param := range f.Params {
+// 		paramTypes = append(paramTypes, CodegenType(param.Type, types))
+// 	}
+// 	returnType := module.Context().VoidType()
+// 	if f.ReturnType != nil {
+// 		returnType = CodegenType(f.ReturnType, types)
+// 	}
+// 	functionType := llvm.FunctionType(returnType, paramTypes, false)
+// 	fun := llvm.AddFunction(module, string(f.Id.Content), functionType)
+// 	values[string(f.Id.Content)] = codegenValue{
+// 		llvm:    fun,
+// 		onStack: false,
+// 	}
+// 	return fun
+// }
+
+// func CodegenFunDef(f *FunDef, module llvm.Module, types map[string]llvm.Type, values map[string]codegenValue) llvm.Value {
+// 	var paramNames []string
+// 	for _, param := range f.Params {
+// 		paramNames = append(paramNames, string(param.Id.Content))
+// 	}
+// 	fun := values[string(f.Id.Content)].llvm
+// 	bb := module.Context().AddBasicBlock(fun, ".entry")
+// 	builder := module.Context().NewBuilder()
+// 	defer builder.Dispose()
+// 	builder.SetInsertPointAtEnd(bb)
+// 	for i, name := range paramNames {
+// 		values[name] = codegenValue{
+// 			llvm:    fun.Param(i),
+// 			onStack: false,
+// 		}
+// 	}
+// 	if len(f.Body.Stmts) == 0 {
+// 		builder.CreateRetVoid()
+// 		return fun
+// 	}
+// 	returns := false
+// 	for _, stmt := range f.Body.Stmts {
+// 		if _, ok := stmt.(*ReturnStmt); ok {
+// 			returns = true
+// 		}
+// 	}
+// 	if !returns {
+// 		builder.CreateRetVoid()
+// 	} else {
+// 		CodegenBlock(f.Body, builder, types, values)
+// 	}
+// 	return fun
+// }
+
+// func CodegenBlock(block *BlockStmt, builder llvm.Builder, types map[string]llvm.Type, values map[string]codegenValue) {
+// 	for _, stmt := range block.Stmts {
+// 		CodegenStmt(stmt, builder, types, values)
+// 	}
+// }
+
+// func CodegenStmt(stmt StmtNode, builder llvm.Builder, types map[string]llvm.Type, values map[string]codegenValue) {
+// 	switch stmt := stmt.(type) {
+// 	case *VarStmt:
+// 		value := CodegenExpr(stmt.Value, builder, types, values)
+// 		alloca := builder.CreateAlloca(value.Type(), string(stmt.Id.Content))
+// 		builder.CreateStore(value, alloca)
+// 		values[string(stmt.Id.Content)] = codegenValue{
+// 			llvm:    alloca,
+// 			onStack: true,
+// 		}
+// 	case *ExprStmt:
+// 		CodegenExpr(stmt.Expr, builder, types, values)
+// 	case *BlockStmt:
+// 		CodegenBlock(stmt, builder, types, values)
+// 	case *ReturnStmt:
+// 		if stmt.Arg != nil {
+// 			arg := CodegenExpr(stmt.Arg, builder, types, values)
+// 			builder.CreateRet(arg)
+// 		} else {
+// 			builder.CreateRetVoid()
+// 		}
+// 	default:
+// 		panic("unreachable")
+// 	}
+// }
+
+// func CodegenExpr(expr ExprNode, builder llvm.Builder, types map[string]llvm.Type, values map[string]codegenValue) llvm.Value {
+// 	switch expr := expr.(type) {
+// 	case *UnaryExprNode:
+// 		switch expr.Operator.Kind {
+// 		case PLUS:
+// 			return CodegenExpr(expr.Operand, builder, types, values)
+// 		case MINUS:
+// 			operand := CodegenExpr(expr.Operand, builder, types, values)
+// 			return builder.CreateNeg(operand, tempName())
+// 		}
+// 	case *BinaryExprNode:
+// 		left := CodegenExpr(expr.Left, builder, types, values)
+// 		right := CodegenExpr(expr.Left, builder, types, values)
+// 		switch expr.Op.Kind {
+// 		case PLUS:
+// 			return builder.CreateAdd(left, right, tempName())
+// 		case MINUS:
+// 			return builder.CreateSub(left, right, tempName())
+// 		case STAR:
+// 			return builder.CreateMul(left, right, tempName())
+// 		case SLASH:
+// 			return builder.CreateSDiv(left, right, tempName())
+// 		}
+// 	case *GroupedExprNode:
+// 		return CodegenExpr(expr.Inner, builder, types, values)
+// 	case *LiteralExprNode:
+// 		switch expr.Token.Kind {
+// 		case INTEGER:
+// 			return llvm.ConstIntFromString(llvm.Int64Type(), string(expr.Token.Content), 10)
+// 		case FLOAT:
+// 			return llvm.ConstFloatFromString(llvm.DoubleType(), string(expr.Token.Content))
+// 		case IDENTIFIER:
+// 			value := values[string(expr.Token.Content)]
+// 			if value.onStack {
+// 				loaded := builder.CreateLoad(value.llvm.AllocatedType(), value.llvm, tempName())
+// 				return loaded
+// 			}
+// 			return value.llvm
+// 		}
+// 	case *CallExprNode:
+// 		calleeName, err := calleeName(expr.Callee)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		calleeValue := values[calleeName]
+// 		args := make([]llvm.Value, 0, len(expr.Args))
+// 		for _, arg := range expr.Args {
+// 			args = append(args, CodegenExpr(arg, builder, types, values))
+// 		}
+// 		return builder.CreateCall(calleeValue.llvm.GlobalValueType(), calleeValue.llvm, args, tempName())
+// 	}
+// 	panic("unreachable")
+// }
+
+// func CodegenType(t TypeNode, types map[string]llvm.Type) llvm.Type {
+// 	switch t := t.(type) {
+// 	case *IdTypeNode:
+// 		return types[string(t.Content)]
+// 	default:
+// 		panic("unreachable")
+// 	}
+// }
+
+// func llvmTypes() map[string]llvm.Type {
+// 	return map[string]llvm.Type{
+// 		"()":    llvm.VoidType(),
+// 		"int":   llvm.Int64Type(),
+// 		"float": llvm.DoubleType(),
+// 	}
+// }
+
+// var tempsCount = 0
+
+// func tempName() string {
+// 	tempsCount++
+// 	return fmt.Sprintf(".tmp%d", tempsCount)
+// }

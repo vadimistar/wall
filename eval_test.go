@@ -8,143 +8,143 @@ import (
 )
 
 type evalExprTest struct {
-	node   wall.ExprNode
+	node   wall.ParsedExpr
 	result wall.EvalObject
 }
 
 var evalExprTests = []evalExprTest{
-	{&wall.LiteralExprNode{
+	{&wall.ParsedLiteralExpr{
 		Token: wall.Token{Kind: wall.INTEGER, Content: []byte("123")},
 	}, &wall.IntObject{
 		Value: 123,
 	}},
-	{&wall.LiteralExprNode{
+	{&wall.ParsedLiteralExpr{
 		Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0.123")},
 	}, &wall.FloatObject{
 		Value: 0.123,
 	}},
-	{&wall.GroupedExprNode{
-		Inner: &wall.LiteralExprNode{
+	{&wall.ParsedGroupedExpr{
+		Inner: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("123")},
 		},
 	}, &wall.IntObject{
 		Value: 123,
 	}},
-	{&wall.UnaryExprNode{
+	{&wall.ParsedUnaryExpr{
 		Operator: wall.Token{Kind: wall.PLUS},
-		Operand: &wall.LiteralExprNode{
+		Operand: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("123")},
 		},
 	}, &wall.IntObject{
 		Value: 123,
 	}},
-	{&wall.UnaryExprNode{
+	{&wall.ParsedUnaryExpr{
 		Operator: wall.Token{Kind: wall.PLUS},
-		Operand: &wall.LiteralExprNode{
+		Operand: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("1.0")},
 		},
 	}, &wall.FloatObject{
 		Value: 1.0,
 	}},
-	{&wall.UnaryExprNode{
+	{&wall.ParsedUnaryExpr{
 		Operator: wall.Token{Kind: wall.MINUS},
-		Operand: &wall.LiteralExprNode{
+		Operand: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("123")},
 		},
 	}, &wall.IntObject{
 		Value: -123,
 	}},
-	{&wall.UnaryExprNode{
+	{&wall.ParsedUnaryExpr{
 		Operator: wall.Token{Kind: wall.MINUS},
-		Operand: &wall.LiteralExprNode{
+		Operand: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("1.0")},
 		},
 	}, &wall.FloatObject{
 		Value: -1.0,
 	}},
-	{&wall.BinaryExprNode{
-		Left: &wall.LiteralExprNode{
+	{&wall.ParsedBinaryExpr{
+		Left: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("3")},
 		},
 		Op: wall.Token{Kind: wall.PLUS},
-		Right: &wall.LiteralExprNode{
+		Right: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("5")},
 		},
 	}, &wall.IntObject{
 		Value: 8,
 	}},
-	{&wall.BinaryExprNode{
-		Left: &wall.LiteralExprNode{
+	{&wall.ParsedBinaryExpr{
+		Left: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("3.0")},
 		},
 		Op: wall.Token{Kind: wall.PLUS},
-		Right: &wall.LiteralExprNode{
+		Right: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("5.0")},
 		},
 	}, &wall.FloatObject{
 		Value: 3.0 + 5.0,
 	}},
-	{&wall.BinaryExprNode{
-		Left: &wall.LiteralExprNode{
+	{&wall.ParsedBinaryExpr{
+		Left: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("3")},
 		},
 		Op: wall.Token{Kind: wall.MINUS},
-		Right: &wall.LiteralExprNode{
+		Right: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("5")},
 		},
 	}, &wall.IntObject{
 		Value: -2,
 	}},
-	{&wall.BinaryExprNode{
-		Left: &wall.LiteralExprNode{
+	{&wall.ParsedBinaryExpr{
+		Left: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("3.0")},
 		},
 		Op: wall.Token{Kind: wall.MINUS},
-		Right: &wall.LiteralExprNode{
+		Right: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("5.0")},
 		},
 	}, &wall.FloatObject{
 		Value: 3.0 - 5.0,
 	}},
-	{&wall.BinaryExprNode{
-		Left: &wall.LiteralExprNode{
+	{&wall.ParsedBinaryExpr{
+		Left: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("3")},
 		},
 		Op: wall.Token{Kind: wall.STAR},
-		Right: &wall.LiteralExprNode{
+		Right: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("5")},
 		},
 	}, &wall.IntObject{
 		Value: 15,
 	}},
-	{&wall.BinaryExprNode{
-		Left: &wall.LiteralExprNode{
+	{&wall.ParsedBinaryExpr{
+		Left: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("3.0")},
 		},
 		Op: wall.Token{Kind: wall.STAR},
-		Right: &wall.LiteralExprNode{
+		Right: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("5.0")},
 		},
 	}, &wall.FloatObject{
 		Value: 3.0 * 5.0,
 	}},
-	{&wall.BinaryExprNode{
-		Left: &wall.LiteralExprNode{
+	{&wall.ParsedBinaryExpr{
+		Left: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("30")},
 		},
 		Op: wall.Token{Kind: wall.SLASH},
-		Right: &wall.LiteralExprNode{
+		Right: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("5")},
 		},
 	}, &wall.IntObject{
 		Value: 6,
 	}},
-	{&wall.BinaryExprNode{
-		Left: &wall.LiteralExprNode{
+	{&wall.ParsedBinaryExpr{
+		Left: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("10.0")},
 		},
 		Op: wall.Token{Kind: wall.SLASH},
-		Right: &wall.LiteralExprNode{
+		Right: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("3.0")},
 		},
 	}, &wall.FloatObject{
@@ -163,15 +163,15 @@ func TestEvalExpr(t *testing.T) {
 }
 
 func TestEvalVarStmt(t *testing.T) {
-	varStmt := &wall.VarStmt{
+	varStmt := &wall.ParsedVar{
 		Var: wall.Token{},
 		Id:  wall.Token{Content: []byte("a")},
 		Eq:  wall.Token{},
-		Value: &wall.LiteralExprNode{
+		Value: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
 		},
 	}
-	idExpr := &wall.LiteralExprNode{
+	idExpr := &wall.ParsedLiteralExpr{
 		Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
 	}
 	ev := wall.NewEvaluator()
@@ -184,24 +184,24 @@ func TestEvalVarStmt(t *testing.T) {
 }
 
 func TestEvalAssignExpr(t *testing.T) {
-	varStmt := &wall.VarStmt{
+	varStmt := &wall.ParsedVar{
 		Var: wall.Token{},
 		Id:  wall.Token{Content: []byte("a")},
 		Eq:  wall.Token{},
-		Value: &wall.LiteralExprNode{
+		Value: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 		},
 	}
-	assignExpr := &wall.BinaryExprNode{
-		Left: &wall.LiteralExprNode{
+	assignExpr := &wall.ParsedBinaryExpr{
+		Left: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
 		},
 		Op: wall.Token{Kind: wall.EQ},
-		Right: &wall.LiteralExprNode{
+		Right: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("20")},
 		},
 	}
-	idExpr := &wall.LiteralExprNode{
+	idExpr := &wall.ParsedLiteralExpr{
 		Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
 	}
 	ev := wall.NewEvaluator()

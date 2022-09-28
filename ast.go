@@ -1,200 +1,189 @@
 package wall
 
-type AstNode interface {
+type ParsedNode interface {
 	pos() Pos
 }
 
-type FileNode struct {
-	Defs []DefNode
+type ParsedFile struct {
+	Defs []ParsedDef
 }
 
-func (f *FileNode) pos() Pos {
+func (f *ParsedFile) pos() Pos {
 	if len(f.Defs) == 0 {
 		return Pos{}
 	}
 	return f.Defs[0].pos()
 }
 
-type DefNode interface {
-	AstNode
-	defNode()
+type ParsedDef interface {
+	ParsedNode
+	def()
 	id() []byte
 }
 
-type FunDef struct {
+type ParsedFunDef struct {
 	Fun        Token
 	Id         Token
-	Params     []FunParam
-	ReturnType TypeNode
-	Body       *BlockStmt
+	Params     []ParsedFunParam
+	ReturnType ParsedType
+	Body       *ParsedBlock
 }
 
-type FunParam struct {
+type ParsedFunParam struct {
 	Id   Token
-	Type TypeNode
+	Type ParsedType
 }
 
-type ImportDef struct {
+type ParsedImport struct {
 	Import Token
 	Name   Token
+	File   *ParsedFile
 }
 
-type ParsedImportDef struct {
-	ImportDef
-	ParsedNode *FileNode
-}
-
-type StructDef struct {
+type ParsedStructDef struct {
 	Struct Token
 	Name   Token
-	Fields []StructField
+	Fields []ParsedStructField
 }
 
-type StructField struct {
+type ParsedStructField struct {
 	Name Token
-	Type TypeNode
+	Type ParsedType
 }
 
-func (f *FunDef) pos() Pos {
+func (f *ParsedFunDef) pos() Pos {
 	return f.Fun.Pos
 }
-func (i *ImportDef) pos() Pos {
+func (i *ParsedImport) pos() Pos {
 	return i.Import.Pos
 }
-func (p *ParsedImportDef) pos() Pos {
-	return p.Import.Pos
-}
-func (s *StructDef) pos() Pos {
+func (s *ParsedStructDef) pos() Pos {
 	return s.Struct.Pos
 }
 
-func (f *FunDef) defNode()          {}
-func (i *ImportDef) defNode()       {}
-func (p *ParsedImportDef) defNode() {}
-func (s *StructDef) defNode()       {}
+func (f *ParsedFunDef) def()    {}
+func (i *ParsedImport) def()    {}
+func (s *ParsedStructDef) def() {}
 
-func (f *FunDef) id() []byte {
+func (f *ParsedFunDef) id() []byte {
 	return f.Id.Content
 }
-func (i *ImportDef) id() []byte {
+func (i *ParsedImport) id() []byte {
 	return i.Name.Content
 }
-func (p *ParsedImportDef) id() []byte {
-	return p.Name.Content
-}
-func (s *StructDef) id() []byte {
+func (s *ParsedStructDef) id() []byte {
 	return s.Name.Content
 }
 
-type StmtNode interface {
-	AstNode
-	stmtNode()
+type ParsedStmt interface {
+	ParsedNode
+	stmt()
 }
 
-type VarStmt struct {
+type ParsedVar struct {
 	Var   Token
 	Id    Token
 	Eq    Token
-	Value ExprNode
+	Value ParsedExpr
 }
 
-type ExprStmt struct {
-	Expr ExprNode
+type ParsedExprStmt struct {
+	Expr ParsedExpr
 }
 
-type BlockStmt struct {
+type ParsedBlock struct {
 	Left  Token
-	Stmts []StmtNode
+	Stmts []ParsedStmt
 	Right Token
 }
 
-type ReturnStmt struct {
+type ParsedReturn struct {
 	Return Token
-	Arg    ExprNode
+	Arg    ParsedExpr
 }
 
-func (v *VarStmt) pos() Pos {
+func (v *ParsedVar) pos() Pos {
 	return v.Id.Pos
 }
-func (e *ExprStmt) pos() Pos {
+func (e *ParsedExprStmt) pos() Pos {
 	return e.Expr.pos()
 }
-func (b *BlockStmt) pos() Pos {
+func (b *ParsedBlock) pos() Pos {
 	return b.Left.Pos
 }
-func (r *ReturnStmt) pos() Pos {
+func (r *ParsedReturn) pos() Pos {
 	return r.Return.Pos
 }
 
-func (v *VarStmt) stmtNode()    {}
-func (e *ExprStmt) stmtNode()   {}
-func (b *BlockStmt) stmtNode()  {}
-func (r *ReturnStmt) stmtNode() {}
+func (v *ParsedVar) stmt()      {}
+func (e *ParsedExprStmt) stmt() {}
+func (b *ParsedBlock) stmt()    {}
+func (r *ParsedReturn) stmt()   {}
 
-type ExprNode interface {
-	AstNode
-	exprNode()
+type ParsedExpr interface {
+	ParsedNode
+	expr()
 }
 
-type UnaryExprNode struct {
+type ParsedUnaryExpr struct {
 	Operator Token
-	Operand  ExprNode
+	Operand  ParsedExpr
 }
 
-type BinaryExprNode struct {
-	Left  ExprNode
+type ParsedBinaryExpr struct {
+	Left  ParsedExpr
 	Op    Token
-	Right ExprNode
+	Right ParsedExpr
 }
 
-type GroupedExprNode struct {
+type ParsedGroupedExpr struct {
 	Left  Token
-	Inner ExprNode
+	Inner ParsedExpr
 	Right Token
 }
 
-type LiteralExprNode struct {
+type ParsedLiteralExpr struct {
 	Token
 }
 
-type CallExprNode struct {
-	Callee ExprNode
-	Args   []ExprNode
+type ParsedCallExpr struct {
+	Callee ParsedExpr
+	Args   []ParsedExpr
 }
 
-func (u UnaryExprNode) pos() Pos {
+func (u ParsedUnaryExpr) pos() Pos {
 	return u.Operator.Pos
 }
-func (b BinaryExprNode) pos() Pos {
+func (b ParsedBinaryExpr) pos() Pos {
 	return b.Left.pos()
 }
-func (g GroupedExprNode) pos() Pos {
+func (g ParsedGroupedExpr) pos() Pos {
 	return g.Left.Pos
 }
-func (l LiteralExprNode) pos() Pos {
+func (l ParsedLiteralExpr) pos() Pos {
 	return l.Token.Pos
 }
-func (c CallExprNode) pos() Pos {
+func (c ParsedCallExpr) pos() Pos {
 	return c.Callee.pos()
 }
 
-func (u UnaryExprNode) exprNode()   {}
-func (b BinaryExprNode) exprNode()  {}
-func (g GroupedExprNode) exprNode() {}
-func (l LiteralExprNode) exprNode() {}
-func (c CallExprNode) exprNode()    {}
+func (u ParsedUnaryExpr) expr()   {}
+func (b ParsedBinaryExpr) expr()  {}
+func (g ParsedGroupedExpr) expr() {}
+func (l ParsedLiteralExpr) expr() {}
+func (c ParsedCallExpr) expr()    {}
 
-type TypeNode interface {
-	AstNode
-	typeNode()
+type ParsedType interface {
+	ParsedNode
+	parsedType()
 }
 
-type IdTypeNode struct {
+type ParsedIdType struct {
 	Token
 }
 
-func (i *IdTypeNode) pos() Pos {
+func (i *ParsedIdType) pos() Pos {
 	return i.Token.Pos
 }
 
-func (i *IdTypeNode) typeNode() {}
+func (i *ParsedIdType) parsedType() {}

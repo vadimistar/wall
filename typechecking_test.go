@@ -7,144 +7,93 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCheckForDuplications(t *testing.T) {
-	notypes := []wall.DefNode{
-		&wall.FunDef{
-			Id: wall.Token{Content: []byte("main")},
-		},
-		&wall.ImportDef{
-			Name: wall.Token{Content: []byte("main")},
-		},
-		&wall.ParsedImportDef{
-			ImportDef: wall.ImportDef{
-				Name: wall.Token{Content: []byte("main")},
-			},
-		},
-	}
-	types := []wall.DefNode{
-		&wall.StructDef{
-			Name: wall.Token{Content: []byte("main")},
-		},
-	}
-	for _, ntp := range notypes {
-		for _, tp := range types {
-			f := &wall.FileNode{
-				Defs: []wall.DefNode{
-					ntp, tp,
-				},
-			}
-			assert.NoError(t, wall.CheckForDuplications(f))
-		}
-	}
-	for _, ntp1 := range notypes {
-		for _, ntp2 := range notypes {
-			f := &wall.FileNode{
-				Defs: []wall.DefNode{
-					ntp1, ntp2,
-				},
-			}
-			assert.Error(t, wall.CheckForDuplications(f))
-		}
-	}
-	for _, tp1 := range types {
-		for _, tp2 := range types {
-			f := &wall.FileNode{
-				Defs: []wall.DefNode{
-					tp1, tp2,
-				},
-			}
-			assert.Error(t, wall.CheckForDuplications(f))
-		}
-	}
-}
-
 func TestCheckImports(t *testing.T) {
-	fileA := &wall.FileNode{
-		Defs: []wall.DefNode{
-			&wall.ParsedImportDef{
-				ImportDef: wall.ImportDef{
-					Name: wall.Token{Content: []byte("B")},
-				},
-				ParsedNode: nil,
+	fileA := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedImport{
+				Name: wall.Token{Content: []byte("B")},
+				File: nil,
 			},
 		},
 	}
-	fileB := &wall.FileNode{
-		Defs: []wall.DefNode{
-			&wall.ParsedImportDef{
-				ImportDef: wall.ImportDef{
-					Name: wall.Token{Content: []byte("A")},
-				},
-				ParsedNode: fileA,
+	fileB := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedImport{
+				Name: wall.Token{Content: []byte("A")},
+				File: fileA,
 			},
 		},
 	}
-	fileA.Defs[0].(*wall.ParsedImportDef).ParsedNode = fileB
-	moduleA := wall.NewModule()
-	wall.CheckImports(fileA, moduleA)
-	moduleB := moduleA.GlobalScope.Import("B")
-	if assert.NotNil(t, moduleB) {
-		moduleA2 := moduleB.GlobalScope.Import("A")
-		assert.Equal(t, moduleA, moduleA2)
+	fileA.Defs[0].(*wall.ParsedImport).File = fileB
+	checkedFileA := wall.NewCheckedFile()
+	assert.NoError(t, wall.CheckImports(fileA, checkedFileA))
+	checkedFileB := checkedFileA.Imports[checkedFileA.GlobalScope.Imports["B"]].File
+	if assert.NotNil(t, checkedFileB) {
+		checkedFileA2 := checkedFileB.Imports[checkedFileB.GlobalScope.Imports["A"]].File
+		assert.Equal(t, checkedFileA, checkedFileA2)
 	}
 }
 
-func TestCheckTypesSignatures(t *testing.T) {
-	file := &wall.FileNode{
-		Defs: []wall.DefNode{
-			&wall.StructDef{
+func TestCheckTypeSignatures(t *testing.T) {
+	file := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedStructDef{
 				Name: wall.Token{Content: []byte("a")},
 			},
 		},
 	}
-	mod := wall.NewModule()
-	wall.CheckTypesSignatures(file, mod)
-	typ, _ := mod.GlobalScope.Type("a")
+	checkedFile := wall.NewCheckedFile()
+	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
+	typ := checkedFile.Types[checkedFile.GlobalScope.Types["a"]]
 	assert.Equal(t, typ, wall.NewStructType())
+	assert.Equal(t, len(checkedFile.Structs), 1)
 }
 
-func TestCheckFunctionsSignatures(t *testing.T) {
-	file := &wall.FileNode{
-		Defs: []wall.DefNode{
-			&wall.FunDef{
+func TestCheckFunctionSignatures(t *testing.T) {
+	file := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedFunDef{
 				Fun: wall.Token{},
 				Id:  wall.Token{Content: []byte("a")},
-				Params: []wall.FunParam{{
-					Type: &wall.IdTypeNode{Token: wall.Token{Content: []byte("A")}},
+				Params: []wall.ParsedFunParam{{
+					Type: &wall.ParsedIdType{Token: wall.Token{Content: []byte("A")}},
 				}},
-				ReturnType: &wall.IdTypeNode{Token: wall.Token{Content: []byte("B")}},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: []byte("B")}},
 			},
 		},
 	}
-	mod := wall.NewModule()
-	typeIdA := mod.DefType("A", &wall.StructType{})
-	typeIdB := mod.DefType("B", &wall.StructType{})
-	assert.NoError(t, wall.CheckFunctionsSignatures(file, mod))
-	if fun, ok := mod.GlobalScope.Funs["a"]; assert.Equal(t, ok, true) {
-		assert.Equal(t, fun, mod.TypeId(&wall.FunctionType{
-			Args: []wall.TypeId{
+	checkedFile := wall.NewCheckedFile()
+	assert.NoError(t, checkedFile.GlobalScope.DefineType("A", wall.Pos{}, wall.NewStructType()))
+	typeIdA := checkedFile.GlobalScope.Types["A"]
+	assert.NoError(t, checkedFile.GlobalScope.DefineType("B", wall.Pos{}, wall.NewStructType()))
+	typeIdB := checkedFile.GlobalScope.Types["B"]
+	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
+	if fun, ok := checkedFile.GlobalScope.Funs["a"]; assert.Equal(t, ok, true) {
+		assert.Equal(t, checkedFile.Types[fun], &wall.FunctionType{
+			Params: []wall.TypeId{
 				typeIdA,
 			},
 			Returns: typeIdB,
-		}))
+		})
 	}
+	assert.Equal(t, len(checkedFile.Funs), 1)
 }
 
 func TestCheckTypesContents(t *testing.T) {
-	file := &wall.FileNode{
-		Defs: []wall.DefNode{
-			&wall.StructDef{
+	file := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedStructDef{
 				Name: wall.Token{Content: []byte("Employee")},
-				Fields: []wall.StructField{
+				Fields: []wall.ParsedStructField{
 					{
 						Name: wall.Token{Content: []byte("name")},
-						Type: &wall.IdTypeNode{
+						Type: &wall.ParsedIdType{
 							Token: wall.Token{Content: []byte("String")},
 						},
 					},
 					{
 						Name: wall.Token{Content: []byte("age")},
-						Type: &wall.IdTypeNode{
+						Type: &wall.ParsedIdType{
 							Token: wall.Token{Content: []byte("int")},
 						},
 					},
@@ -152,93 +101,94 @@ func TestCheckTypesContents(t *testing.T) {
 			},
 		},
 	}
-	mod := wall.NewModule()
-	employeeTypeId := mod.DefType("Employee", wall.NewStructType())
-	stringTypeId := mod.DefType("String", wall.NewStructType())
-	intTypeId := mod.DefType("int", wall.NewStructType())
-	assert.NoError(t, wall.CheckTypesContents(file, mod))
-	if assert.IsType(t, mod.Types[employeeTypeId], &wall.StructType{}) {
-		emp := mod.Types[employeeTypeId].(*wall.StructType)
-		assert.Equal(t, emp.Fields, map[string]wall.TypeId{
+	checkedFile := wall.NewCheckedFile()
+	assert.NoError(t, checkedFile.GlobalScope.DefineType("String", wall.Pos{}, wall.NewStructType()))
+	stringTypeId := checkedFile.GlobalScope.Types["String"]
+	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
+	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
+	employeeTypeId := checkedFile.GlobalScope.Types["Employee"]
+	if assert.IsType(t, wall.NewStructType(), checkedFile.Types[employeeTypeId]) {
+		emp := checkedFile.Types[employeeTypeId].(*wall.StructType)
+		assert.Equal(t, map[string]wall.TypeId{
 			"name": stringTypeId,
-			"age":  intTypeId,
-		})
+			"age":  wall.INT_TYPE_ID,
+		}, emp.Fields)
 	}
 }
 
 type checkBlocksTest struct {
-	block      *wall.BlockStmt
-	returnType wall.TypeNode
+	block      *wall.ParsedBlock
+	returnType wall.ParsedType
 }
 
 var checkBlocksTests = []checkBlocksTest{
 	{
-		block: &wall.BlockStmt{
-			Stmts: []wall.StmtNode{},
+		block: &wall.ParsedBlock{
+			Stmts: []wall.ParsedStmt{},
 		},
 		returnType: nil,
 	},
 	{
-		block: &wall.BlockStmt{
-			Stmts: []wall.StmtNode{},
+		block: &wall.ParsedBlock{
+			Stmts: []wall.ParsedStmt{},
 		},
-		returnType: &wall.IdTypeNode{
+		returnType: &wall.ParsedIdType{
 			Token: wall.Token{Content: []byte("()")},
 		},
 	},
 	{
-		block: &wall.BlockStmt{
-			Stmts: []wall.StmtNode{
-				&wall.ReturnStmt{},
+		block: &wall.ParsedBlock{
+			Stmts: []wall.ParsedStmt{
+				&wall.ParsedReturn{},
 			},
 		},
-		returnType: &wall.IdTypeNode{
+		returnType: &wall.ParsedIdType{
 			Token: wall.Token{Content: []byte("()")},
 		},
 	},
 	{
-		block: &wall.BlockStmt{
-			Stmts: []wall.StmtNode{
-				&wall.ReturnStmt{
-					Arg: &wall.LiteralExprNode{
+		block: &wall.ParsedBlock{
+			Stmts: []wall.ParsedStmt{
+				&wall.ParsedReturn{
+					Arg: &wall.ParsedLiteralExpr{
 						Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
 					},
 				},
 			},
 		},
-		returnType: &wall.IdTypeNode{
+		returnType: &wall.ParsedIdType{
 			Token: wall.Token{Content: []byte("int")},
 		},
 	},
 	{
-		block: &wall.BlockStmt{
-			Stmts: []wall.StmtNode{
-				&wall.BlockStmt{},
-				&wall.ReturnStmt{
-					Arg: &wall.LiteralExprNode{
+		block: &wall.ParsedBlock{
+			Stmts: []wall.ParsedStmt{
+				&wall.ParsedBlock{},
+				&wall.ParsedReturn{
+					Arg: &wall.ParsedLiteralExpr{
 						Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
 					},
 				},
 			},
 		},
-		returnType: &wall.IdTypeNode{
+		returnType: &wall.ParsedIdType{
 			Token: wall.Token{Content: []byte("int")},
 		},
 	},
 	{
-		block: &wall.BlockStmt{
-			Stmts: []wall.StmtNode{
-				&wall.BlockStmt{},
-				&wall.BlockStmt{
-					Stmts: []wall.StmtNode{&wall.ReturnStmt{
-						Arg: &wall.LiteralExprNode{
+		block: &wall.ParsedBlock{
+			Stmts: []wall.ParsedStmt{
+				&wall.ParsedBlock{},
+				&wall.ParsedBlock{
+					Stmts: []wall.ParsedStmt{&wall.ParsedReturn{
+						Arg: &wall.ParsedLiteralExpr{
 							Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
 						},
 					}},
 				},
 			},
 		},
-		returnType: &wall.IdTypeNode{
+		returnType: &wall.ParsedIdType{
 			Token: wall.Token{Content: []byte("int")},
 		},
 	},
@@ -246,210 +196,178 @@ var checkBlocksTests = []checkBlocksTest{
 
 func TestCheckBlocks(t *testing.T) {
 	for _, test := range checkBlocksTests {
-		file := &wall.FileNode{
-			Defs: []wall.DefNode{
-				&wall.FunDef{
+		file := &wall.ParsedFile{
+			Defs: []wall.ParsedDef{
+				&wall.ParsedFunDef{
 					Id:         wall.Token{Content: []byte("a")},
 					Body:       test.block,
 					ReturnType: test.returnType,
 				},
 			},
 		}
-		mod := wall.NewModule()
-		assert.NoError(t, wall.CheckFunctionsSignatures(file, mod))
-		assert.NoError(t, wall.CheckBlocks(file, mod))
+		checkedFile := wall.NewCheckedFile()
+		assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
+		assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 	}
 }
 
-type checkStmtTest struct {
-	stmt   wall.StmtNode
-	typeid wall.TypeId
-}
-
-var checkStmtTests = []checkStmtTest{
-	{
-		stmt: &wall.VarStmt{
-			Id: wall.Token{Content: []byte("")},
-			Value: &wall.LiteralExprNode{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
-			},
+var checkStmtTests = []wall.ParsedStmt{
+	&wall.ParsedVar{
+		Id: wall.Token{Content: []byte("")},
+		Value: &wall.ParsedLiteralExpr{
+			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 		},
-		typeid: wall.UNIT_TYPE_ID,
 	},
-	{
-		stmt: &wall.ExprStmt{
-			Expr: &wall.LiteralExprNode{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
-			},
+	&wall.ParsedExprStmt{
+		Expr: &wall.ParsedLiteralExpr{
+			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 		},
-		typeid: wall.UNIT_TYPE_ID,
 	},
 }
 
 func TestCheckStmt(t *testing.T) {
 	for _, test := range checkStmtTests {
-		mod := wall.NewModule()
-		typ, returns, err := wall.CheckStmt(test.stmt, mod.GlobalScope, &wall.MayReturn{TypeId: wall.UNIT_TYPE_ID})
-		if assert.NoError(t, err) {
-			assert.Equal(t, test.typeid, typ)
-			assert.Equal(t, wall.TypeId(-1), returns)
-		}
+		checkedFile := wall.NewCheckedFile()
+		_, err := wall.CheckStmt(test, checkedFile.GlobalScope, &wall.MayReturn{Type: wall.UNIT_TYPE_ID})
+		assert.NoError(t, err)
 	}
 }
 
 type checkExprTest struct {
-	expr   wall.ExprNode
+	expr   wall.ParsedExpr
 	typeid wall.TypeId
 }
 
 var checkExprTests = []checkExprTest{
 	{
-		expr: &wall.LiteralExprNode{
+		expr: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 		},
 		typeid: wall.INT_TYPE_ID,
 	},
 	{
-		expr: &wall.LiteralExprNode{
+		expr: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0.0")},
 		},
 		typeid: wall.FLOAT_TYPE_ID,
 	},
 	{
-		expr: &wall.GroupedExprNode{
-			Inner: &wall.LiteralExprNode{
+		expr: &wall.ParsedGroupedExpr{
+			Inner: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
 		typeid: wall.FLOAT_TYPE_ID,
 	},
 	{
-		expr: &wall.UnaryExprNode{
-			Operator: wall.Token{Kind: wall.PLUS},
-			Operand: &wall.LiteralExprNode{
+		expr: &wall.ParsedUnaryExpr{
+			Operator: wall.Token{Kind: wall.MINUS},
+			Operand: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
 		typeid: wall.INT_TYPE_ID,
 	},
 	{
-		expr: &wall.UnaryExprNode{
-			Operator: wall.Token{Kind: wall.PLUS},
-			Operand: &wall.LiteralExprNode{
+		expr: &wall.ParsedUnaryExpr{
+			Operator: wall.Token{Kind: wall.MINUS},
+			Operand: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
 		typeid: wall.FLOAT_TYPE_ID,
 	},
 	{
-		expr: &wall.UnaryExprNode{
-			Operator: wall.Token{Kind: wall.MINUS},
-			Operand: &wall.LiteralExprNode{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
-			},
-		},
-		typeid: wall.INT_TYPE_ID,
-	},
-	{
-		expr: &wall.UnaryExprNode{
-			Operator: wall.Token{Kind: wall.MINUS},
-			Operand: &wall.LiteralExprNode{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
-			},
-		},
-		typeid: wall.FLOAT_TYPE_ID,
-	},
-	{
-		expr: &wall.BinaryExprNode{
-			Left: &wall.LiteralExprNode{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 			Op: wall.Token{Kind: wall.PLUS},
-			Right: &wall.LiteralExprNode{
+			Right: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
 		typeid: wall.INT_TYPE_ID,
 	},
 	{
-		expr: &wall.BinaryExprNode{
-			Left: &wall.LiteralExprNode{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 			Op: wall.Token{Kind: wall.MINUS},
-			Right: &wall.LiteralExprNode{
+			Right: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
 		typeid: wall.INT_TYPE_ID,
 	},
 	{
-		expr: &wall.BinaryExprNode{
-			Left: &wall.LiteralExprNode{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 			Op: wall.Token{Kind: wall.STAR},
-			Right: &wall.LiteralExprNode{
+			Right: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
 		typeid: wall.INT_TYPE_ID,
 	},
 	{
-		expr: &wall.BinaryExprNode{
-			Left: &wall.LiteralExprNode{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 			Op: wall.Token{Kind: wall.SLASH},
-			Right: &wall.LiteralExprNode{
+			Right: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
 		typeid: wall.INT_TYPE_ID,
 	},
 	{
-		expr: &wall.BinaryExprNode{
-			Left: &wall.LiteralExprNode{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 			Op: wall.Token{Kind: wall.PLUS},
-			Right: &wall.LiteralExprNode{
+			Right: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
 		typeid: wall.FLOAT_TYPE_ID,
 	},
 	{
-		expr: &wall.BinaryExprNode{
-			Left: &wall.LiteralExprNode{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 			Op: wall.Token{Kind: wall.MINUS},
-			Right: &wall.LiteralExprNode{
+			Right: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
 		typeid: wall.FLOAT_TYPE_ID,
 	},
 	{
-		expr: &wall.BinaryExprNode{
-			Left: &wall.LiteralExprNode{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 			Op: wall.Token{Kind: wall.STAR},
-			Right: &wall.LiteralExprNode{
+			Right: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
 		typeid: wall.FLOAT_TYPE_ID,
 	},
 	{
-		expr: &wall.BinaryExprNode{
-			Left: &wall.LiteralExprNode{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 			Op: wall.Token{Kind: wall.SLASH},
-			Right: &wall.LiteralExprNode{
+			Right: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
@@ -459,82 +377,82 @@ var checkExprTests = []checkExprTest{
 
 func TestCheckExpr(t *testing.T) {
 	for _, test := range checkExprTests {
-		mod := wall.NewModule()
-		typ, err := wall.CheckExpr(test.expr, mod.GlobalScope)
+		checkedFile := wall.NewCheckedFile()
+		expr, err := wall.CheckExpr(test.expr, checkedFile.GlobalScope)
 		if assert.NoError(t, err) {
-			assert.Equal(t, test.typeid, typ)
+			assert.Equal(t, test.typeid, expr.TypeId())
 		}
 	}
 }
 
 func TestCheckVarStmt(t *testing.T) {
-	file := &wall.FileNode{
-		Defs: []wall.DefNode{
-			&wall.FunDef{
+	file := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedFunDef{
 				Id: wall.Token{Content: []byte("")},
-				Body: &wall.BlockStmt{
-					Stmts: []wall.StmtNode{
-						&wall.VarStmt{
+				Body: &wall.ParsedBlock{
+					Stmts: []wall.ParsedStmt{
+						&wall.ParsedVar{
 							Id: wall.Token{Content: []byte("a")},
-							Value: &wall.LiteralExprNode{
+							Value: &wall.ParsedLiteralExpr{
 								Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 							},
 						},
-						&wall.ReturnStmt{
-							Arg: &wall.LiteralExprNode{
+						&wall.ParsedReturn{
+							Arg: &wall.ParsedLiteralExpr{
 								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
 							},
 						},
 					},
 				},
-				ReturnType: &wall.IdTypeNode{
+				ReturnType: &wall.ParsedIdType{
 					Token: wall.Token{Content: []byte("int")},
 				},
 			},
 		},
 	}
-	mod := wall.NewModule()
-	assert.NoError(t, wall.CheckFunctionsSignatures(file, mod))
-	assert.NoError(t, wall.CheckBlocks(file, mod))
+	checkedFile := wall.NewCheckedFile()
+	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
+	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 }
 
 func TestCheckCallExpr(t *testing.T) {
-	file := &wall.FileNode{
-		Defs: []wall.DefNode{
-			&wall.FunDef{
+	file := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedFunDef{
 				Id: wall.Token{Content: []byte("sum")},
-				Params: []wall.FunParam{
+				Params: []wall.ParsedFunParam{
 					{
 						Id: wall.Token{Content: []byte("a")},
-						Type: &wall.IdTypeNode{
+						Type: &wall.ParsedIdType{
 							Token: wall.Token{Content: []byte("int")},
 						},
 					},
 					{
 						Id: wall.Token{Content: []byte("b")},
-						Type: &wall.IdTypeNode{
+						Type: &wall.ParsedIdType{
 							Token: wall.Token{Content: []byte("int")},
 						},
 					},
 				},
-				ReturnType: &wall.IdTypeNode{Token: wall.Token{Content: []byte("int")}},
-				Body:       &wall.BlockStmt{Stmts: []wall.StmtNode{&wall.ReturnStmt{Arg: &wall.LiteralExprNode{Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")}}}}},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: []byte("int")}},
+				Body:       &wall.ParsedBlock{Stmts: []wall.ParsedStmt{&wall.ParsedReturn{Arg: &wall.ParsedLiteralExpr{Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")}}}}},
 			},
-			&wall.FunDef{
-				Params:     []wall.FunParam{},
+			&wall.ParsedFunDef{
+				Params:     []wall.ParsedFunParam{},
 				ReturnType: nil,
-				Body: &wall.BlockStmt{
-					Stmts: []wall.StmtNode{
-						&wall.ExprStmt{
-							Expr: &wall.CallExprNode{
-								Callee: &wall.LiteralExprNode{
+				Body: &wall.ParsedBlock{
+					Stmts: []wall.ParsedStmt{
+						&wall.ParsedExprStmt{
+							Expr: &wall.ParsedCallExpr{
+								Callee: &wall.ParsedLiteralExpr{
 									Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("sum")},
 								},
-								Args: []wall.ExprNode{
-									&wall.LiteralExprNode{
+								Args: []wall.ParsedExpr{
+									&wall.ParsedLiteralExpr{
 										Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 									},
-									&wall.LiteralExprNode{
+									&wall.ParsedLiteralExpr{
 										Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 									},
 								},
@@ -545,7 +463,7 @@ func TestCheckCallExpr(t *testing.T) {
 			},
 		},
 	}
-	mod := wall.NewModule()
-	assert.NoError(t, wall.CheckFunctionsSignatures(file, mod))
-	assert.NoError(t, wall.CheckBlocks(file, mod))
+	checkedFile := wall.NewCheckedFile()
+	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
+	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 }

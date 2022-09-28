@@ -10,7 +10,6 @@ import (
 	"wall"
 
 	"github.com/jessevdk/go-flags"
-	"tinygo.org/x/go-llvm"
 )
 
 var options struct {
@@ -37,25 +36,14 @@ func main() {
 	check(err)
 	parsedFile, err := wall.ParseCompilationUnit(options.Source, bytes)
 	check(err)
-	_, err = wall.Check(parsedFile)
+	// _, err = wall.Check(parsedFile)
 	check(err)
-	llvmModule := wall.Codegen(parsedFile)
-	check(err)
-	bytecodeFilename := strings.TrimSuffix(options.Source, ".wl") + ".bc"
-	bytecodeFile, err := os.Create(bytecodeFilename)
-	check(err)
-	llvmModule.Dump()
-	llvm.WriteBitcodeToFile(llvmModule, bytecodeFile)
-	llvmModule.Dispose()
-	// compiling the bytecode to an object file
-	objectFilename := strings.TrimSuffix(options.Source, ".wl") + ".o"
-	llc := exec.Command("llc", "-filetype=obj", "-o", objectFilename, bytecodeFilename)
-	output, err := llc.Output()
-	fmt.Printf("%s", output)
-	check(err)
+	cSource := wall.Codegen(parsedFile)
+	cFilename := strings.TrimSuffix(options.Source, ".wl") + ".c"
+	check(os.WriteFile(cFilename, []byte(cSource), 1066))
 	// linking
-	ld := exec.Command("gcc", objectFilename, "-o", options.Output)
-	output, err = ld.Output()
+	gcc := exec.Command("gcc", cFilename, "-o", options.Output)
+	output, err := gcc.Output()
 	fmt.Printf("%s", output)
 	check(err)
 }
