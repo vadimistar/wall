@@ -126,6 +126,9 @@ func codegenGroupedExpr(expr *CheckedGroupedExpr, s *Scope) string {
 }
 
 func codegenLiteralExpr(expr *CheckedLiteralExpr, s *Scope) string {
+	if expr.Literal.Kind == STRING {
+		return fmt.Sprintf("\"%s\"", expr.Literal.Content)
+	}
 	return string(expr.Literal.Content)
 }
 
@@ -168,7 +171,7 @@ func codegenVarStmt(stmt *CheckedVar, s *Scope) string {
 }
 
 func codegenExprStmt(stmt *CheckedExprStmt, s *Scope) string {
-	return CodegenExpr(stmt.Expr, s)
+	return CodegenExpr(stmt.Expr, s) + ";"
 }
 
 func codegenBlock(b *CheckedBlock, s *Scope) string {
