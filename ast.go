@@ -182,8 +182,17 @@ type ParsedIdType struct {
 	Token
 }
 
+type ParsedPointerType struct {
+	Star Token
+	To   ParsedType
+}
+
 func (i *ParsedIdType) pos() Pos {
 	return i.Token.Pos
 }
+func (p *ParsedPointerType) pos() Pos {
+	return p.Star.Pos
+}
 
-func (i *ParsedIdType) parsedType() {}
+func (i *ParsedIdType) parsedType()      {}
+func (p *ParsedPointerType) parsedType() {}

@@ -472,6 +472,16 @@ func (p *Parser) parseType() (ParsedType, error) {
 		return &ParsedIdType{
 			Token: tok,
 		}, nil
+	case STAR:
+		star := p.advance()
+		to, err := p.parseType()
+		if err != nil {
+			return nil, err
+		}
+		return &ParsedPointerType{
+			Star: star,
+			To:   to,
+		}, nil
 	}
 	return nil, NewError(p.next().Pos, "expected type, but got %s", p.next().Kind)
 }

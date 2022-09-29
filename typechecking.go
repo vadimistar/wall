@@ -579,6 +579,14 @@ func checkType(t ParsedType, s *Scope) (TypeId, error) {
 			}
 			return typeId, nil
 		}
+	case *ParsedPointerType:
+		to, err := checkType(t.To, s)
+		if err != nil {
+			return NOT_FOUND, err
+		}
+		return s.File.TypeId(&PointerType{
+			Type: to,
+		}), nil
 	}
 	panic("unreachable")
 }

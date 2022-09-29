@@ -127,7 +127,9 @@ func codegenGroupedExpr(expr *CheckedGroupedExpr, s *Scope) string {
 
 func codegenLiteralExpr(expr *CheckedLiteralExpr, s *Scope) string {
 	if expr.Literal.Kind == STRING {
-		return fmt.Sprintf("\"%s\"", expr.Literal.Content)
+		s := string(expr.Literal.Content)
+		s = strings.ReplaceAll(s, "\n", "\n\"")
+		return fmt.Sprintf("\"%s\"", s)
 	}
 	return string(expr.Literal.Content)
 }
@@ -136,7 +138,7 @@ func codegenCallExpr(expr *CheckedCallExpr, s *Scope) string {
 	callee := CodegenExpr(expr.Callee, s)
 	if callee == "inlineC" {
 		inlineC := CodegenExpr(expr.Args[0], s)
-		inlineC = inlineC[1 : len(inlineC)-1]
+		inlineC = strings.ReplaceAll(inlineC, "\"", "")
 		return inlineC
 	}
 	var builder strings.Builder
@@ -173,7 +175,7 @@ func CodegenStmt(stmt CheckedStmt, s *Scope) string {
 func codegenVarStmt(stmt *CheckedVar, s *Scope) string {
 	val := CodegenExpr(stmt.Value, s)
 	t := CodegenType(stmt.Type, s)
-	return fmt.Sprintf("%s %s = %s;", t, stmt.Name.Content, val)
+	return fmt.Sprintf("%s %s = %s;", t, string(stmt.Name.Content), val)
 }
 
 func codegenExprStmt(stmt *CheckedExprStmt, s *Scope) string {
@@ -221,7 +223,7 @@ func codegenFunDef(def *CheckedFunDef, s *Scope) string {
 		builder.WriteString(CodegenType(UNIT_TYPE_ID, s))
 	}
 	for i, param := range def.Params {
-		fmt.Fprintf(&builder, "%s %s", CodegenType(param.Type, s), cId(string(param.Name.Content)))
+		fmt.Fprintf(&builder, "%s %s", CodegenType(param.Type, s), param.Name.Content)
 		if i < len(def.Params)-1 {
 			builder.WriteString(", ")
 		}
