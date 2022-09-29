@@ -5,27 +5,24 @@ import (
 	"reflect"
 )
 
-// func Check(f *FileNode) (*Module, error) {
-// if err := CheckForDuplications(f); err != nil {
-// 	return nil, err
-// }
-// m := NewModule()
-// CheckImports(f, m)
-// CheckTypesSignatures(f, m)
-// if err := CheckFunctionsSignatures(f, m); err != nil {
-// 	return nil, err
-// }
-// if err := CheckTypesContents(f, m); err != nil {
-// 	return nil, err
-// }
-// if err := CheckBlocks(f, m); err != nil {
-// 	return nil, err
-// }
-// 	return m, nil
-// }
-
 func CheckCompilationUnit(f *ParsedFile) (*CheckedFile, error) {
-	panic("unimplemented")
+	checkedFile := NewCheckedFile(f.pos().Filename)
+	if err := CheckImports(f, checkedFile); err != nil {
+		return nil, err
+	}
+	if err := CheckTypeSignatures(f, checkedFile); err != nil {
+		return nil, err
+	}
+	if err := CheckFunctionSignatures(f, checkedFile); err != nil {
+		return nil, err
+	}
+	if err := CheckTypeContents(f, checkedFile); err != nil {
+		return nil, err
+	}
+	if err := CheckBlocks(f, checkedFile); err != nil {
+		return nil, err
+	}
+	return checkedFile, nil
 }
 
 func CheckImports(f *ParsedFile, c *CheckedFile) error {
@@ -47,7 +44,7 @@ func checkImports(f *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFile]*C
 			if file, checked := checkedFiles[def.File]; checked {
 				checkedFile = file
 			} else {
-				checkedFile = NewCheckedFile()
+				checkedFile = NewCheckedFile(def.File.pos().Filename)
 			}
 			checkedImport := &CheckedImport{
 				Name: def.Name,
@@ -1180,11 +1177,40 @@ func (s *Scope) typeToString(typeId TypeId) string {
 	panic("unreachable")
 }
 
+func (s *Scope) findAndRenameType(name string, newName string) bool {
+	if t, ok := s.Types[name]; ok {
+		delete(s.Types, name)
+		s.Types[newName] = t
+		return true
+	}
+	for _, child := range s.Children {
+		if child.findAndRenameType(name, newName) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Scope) findAndRenameFun(name string, newName string) bool {
+	if t, ok := s.Funs[name]; ok {
+		delete(s.Funs, name)
+		s.Funs[newName] = t
+		return true
+	}
+	for _, child := range s.Children {
+		if child.findAndRenameFun(name, newName) {
+			return true
+		}
+	}
+	return false
+}
+
 type ImportId int
 
 const IMPORT_NOT_FOUND ImportId = -1
 
 type CheckedFile struct {
+	Filename    string
 	Imports     []*CheckedImport
 	Funs        []*CheckedFunDef
 	Structs     []*CheckedStructDef
@@ -1192,8 +1218,9 @@ type CheckedFile struct {
 	GlobalScope *Scope
 }
 
-func NewCheckedFile() *CheckedFile {
+func NewCheckedFile(filename string) *CheckedFile {
 	c := &CheckedFile{
+		Filename:    filename,
 		Imports:     make([]*CheckedImport, 0),
 		Funs:        make([]*CheckedFunDef, 0),
 		Structs:     make([]*CheckedStructDef, 0),

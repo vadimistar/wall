@@ -25,7 +25,7 @@ func TestCheckImports(t *testing.T) {
 		},
 	}
 	fileA.Defs[0].(*wall.ParsedImport).File = fileB
-	checkedFileA := wall.NewCheckedFile()
+	checkedFileA := wall.NewCheckedFile("")
 	assert.NoError(t, wall.CheckImports(fileA, checkedFileA))
 	checkedFileB := checkedFileA.Imports[checkedFileA.GlobalScope.Imports["B"]].File
 	if assert.NotNil(t, checkedFileB) {
@@ -42,7 +42,7 @@ func TestCheckTypeSignatures(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile()
+	checkedFile := wall.NewCheckedFile("")
 	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
 	typ := checkedFile.Types[checkedFile.GlobalScope.Types["a"]]
 	assert.Equal(t, typ, wall.NewStructType())
@@ -62,7 +62,7 @@ func TestCheckFunctionSignatures(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile()
+	checkedFile := wall.NewCheckedFile("")
 	assert.NoError(t, checkedFile.GlobalScope.DefineType("A", wall.Pos{}, wall.NewStructType()))
 	typeIdA := checkedFile.GlobalScope.Types["A"]
 	assert.NoError(t, checkedFile.GlobalScope.DefineType("B", wall.Pos{}, wall.NewStructType()))
@@ -101,7 +101,7 @@ func TestCheckTypesContents(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile()
+	checkedFile := wall.NewCheckedFile("")
 	assert.NoError(t, checkedFile.GlobalScope.DefineType("String", wall.Pos{}, wall.NewStructType()))
 	stringTypeId := checkedFile.GlobalScope.Types["String"]
 	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
@@ -205,7 +205,7 @@ func TestCheckBlocks(t *testing.T) {
 				},
 			},
 		}
-		checkedFile := wall.NewCheckedFile()
+		checkedFile := wall.NewCheckedFile("")
 		assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 		assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 	}
@@ -227,7 +227,7 @@ var checkStmtTests = []wall.ParsedStmt{
 
 func TestCheckStmt(t *testing.T) {
 	for _, test := range checkStmtTests {
-		checkedFile := wall.NewCheckedFile()
+		checkedFile := wall.NewCheckedFile("")
 		_, err := wall.CheckStmt(test, checkedFile.GlobalScope, &wall.MayReturn{Type: wall.UNIT_TYPE_ID})
 		assert.NoError(t, err)
 	}
@@ -377,7 +377,7 @@ var checkExprTests = []checkExprTest{
 
 func TestCheckExpr(t *testing.T) {
 	for _, test := range checkExprTests {
-		checkedFile := wall.NewCheckedFile()
+		checkedFile := wall.NewCheckedFile("")
 		expr, err := wall.CheckExpr(test.expr, checkedFile.GlobalScope)
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.typeid, expr.TypeId())
@@ -411,7 +411,7 @@ func TestCheckVarStmt(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile()
+	checkedFile := wall.NewCheckedFile("")
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 }
@@ -463,7 +463,7 @@ func TestCheckCallExpr(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile()
+	checkedFile := wall.NewCheckedFile("")
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 }
