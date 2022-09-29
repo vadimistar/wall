@@ -374,7 +374,7 @@ func CheckExpr(p ParsedExpr, s *Scope) (CheckedExpr, error) {
 
 func checkIdExpr(p *ParsedIdExpr, s *Scope) (*CheckedIdExpr, error) {
 	name := s.findName(string(p.Content))
-	if name.TypeId == NOT_FOUND {
+	if name == nil {
 		return nil, NewError(p.pos(), "undeclared: %s", p.Content)
 	}
 	return &CheckedIdExpr{
