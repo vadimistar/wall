@@ -11,43 +11,43 @@ import (
 
 type parseLiteralExprTest struct {
 	tokens   []wall.Token
-	expected wall.ParsedLiteralExpr
+	expected wall.ParsedExpr
 }
 
 var parseLiteralExprTests = []parseLiteralExprTest{
 	{[]wall.Token{
 		{Kind: wall.IDENTIFIER, Content: []byte("abc")},
 		{Kind: wall.EOF},
-	}, wall.ParsedLiteralExpr{
+	}, &wall.ParsedIdExpr{
 		Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("abc")},
 	}},
 	{[]wall.Token{
 		{Kind: wall.INTEGER, Content: []byte("123")},
 		{Kind: wall.EOF},
-	}, wall.ParsedLiteralExpr{
+	}, &wall.ParsedLiteralExpr{
 		Token: wall.Token{Kind: wall.INTEGER, Content: []byte("123")},
 	}},
 	{[]wall.Token{
 		{Kind: wall.FLOAT, Content: []byte("1.0")},
 		{Kind: wall.EOF},
-	}, wall.ParsedLiteralExpr{
+	}, &wall.ParsedLiteralExpr{
 		Token: wall.Token{Kind: wall.FLOAT, Content: []byte("1.0")},
 	}},
 	{[]wall.Token{
 		{Kind: wall.STRING, Content: []byte("ABC")},
 		{Kind: wall.EOF},
-	}, wall.ParsedLiteralExpr{
+	}, &wall.ParsedLiteralExpr{
 		Token: wall.Token{Kind: wall.STRING, Content: []byte("ABC")},
 	}},
 }
 
-func TestParseLiteralExpr(t *testing.T) {
+func TestParseLiteralAndIdExpr(t *testing.T) {
 	for _, test := range parseLiteralExprTests {
 		t.Logf("testing %#v", test.tokens)
 		p := wall.NewParser(test.tokens)
 		e, err := p.ParseExprAndEof()
 		assert.NoError(t, err)
-		assert.Equal(t, e, &test.expected)
+		assert.Equal(t, e, test.expected)
 	}
 }
 
@@ -80,16 +80,16 @@ func TestParseBinaryExpr(t *testing.T) {
 		assert.NoError(t, err)
 		if wall.IsRightAssoc(op.Kind) {
 			expected := &wall.ParsedBinaryExpr{
-				Left: &wall.ParsedLiteralExpr{
+				Left: &wall.ParsedIdExpr{
 					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
 				},
 				Op: op,
 				Right: &wall.ParsedBinaryExpr{
-					Left: &wall.ParsedLiteralExpr{
+					Left: &wall.ParsedIdExpr{
 						Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
 					},
 					Op: op,
-					Right: &wall.ParsedLiteralExpr{
+					Right: &wall.ParsedIdExpr{
 						Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("c")},
 					},
 				},
@@ -99,16 +99,16 @@ func TestParseBinaryExpr(t *testing.T) {
 		}
 		expected := &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedBinaryExpr{
-				Left: &wall.ParsedLiteralExpr{
+				Left: &wall.ParsedIdExpr{
 					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
 				},
 				Op: op,
-				Right: &wall.ParsedLiteralExpr{
+				Right: &wall.ParsedIdExpr{
 					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
 				},
 			},
 			Op: op,
-			Right: &wall.ParsedLiteralExpr{
+			Right: &wall.ParsedIdExpr{
 				Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("c")},
 			},
 		}
@@ -122,7 +122,7 @@ func TestParseGroupedExpr(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expr, &wall.ParsedGroupedExpr{
 		Left: wall.Token{Kind: wall.LEFTPAREN},
-		Inner: &wall.ParsedLiteralExpr{
+		Inner: &wall.ParsedIdExpr{
 			Token: wall.Token{Kind: wall.IDENTIFIER},
 		},
 		Right: wall.Token{Kind: wall.RIGHTPAREN},
@@ -138,7 +138,7 @@ var parseCallExprTests = []parseCallExprTest{
 	{
 		tokens: []wall.Token{{Kind: wall.IDENTIFIER}, {Kind: wall.LEFTPAREN}, {Kind: wall.RIGHTPAREN}},
 		node: &wall.ParsedCallExpr{
-			Callee: &wall.ParsedLiteralExpr{
+			Callee: &wall.ParsedIdExpr{
 				Token: wall.Token{Kind: wall.IDENTIFIER},
 			},
 			Args: []wall.ParsedExpr{},
@@ -147,7 +147,7 @@ var parseCallExprTests = []parseCallExprTest{
 	{
 		tokens: []wall.Token{{Kind: wall.IDENTIFIER}, {Kind: wall.LEFTPAREN}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTPAREN}},
 		node: &wall.ParsedCallExpr{
-			Callee: &wall.ParsedLiteralExpr{
+			Callee: &wall.ParsedIdExpr{
 				Token: wall.Token{Kind: wall.IDENTIFIER},
 			},
 			Args: []wall.ParsedExpr{
@@ -160,7 +160,7 @@ var parseCallExprTests = []parseCallExprTest{
 	{
 		tokens: []wall.Token{{Kind: wall.IDENTIFIER}, {Kind: wall.LEFTPAREN}, {Kind: wall.INTEGER}, {Kind: wall.COMMA}, {Kind: wall.RIGHTPAREN}},
 		node: &wall.ParsedCallExpr{
-			Callee: &wall.ParsedLiteralExpr{
+			Callee: &wall.ParsedIdExpr{
 				Token: wall.Token{Kind: wall.IDENTIFIER},
 			},
 			Args: []wall.ParsedExpr{
@@ -173,7 +173,7 @@ var parseCallExprTests = []parseCallExprTest{
 	{
 		tokens: []wall.Token{{Kind: wall.IDENTIFIER}, {Kind: wall.LEFTPAREN}, {Kind: wall.INTEGER}, {Kind: wall.COMMA}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTPAREN}},
 		node: &wall.ParsedCallExpr{
-			Callee: &wall.ParsedLiteralExpr{
+			Callee: &wall.ParsedIdExpr{
 				Token: wall.Token{Kind: wall.IDENTIFIER},
 			},
 			Args: []wall.ParsedExpr{
@@ -193,7 +193,7 @@ func TestParseCallExpr(t *testing.T) {
 		pr := wall.NewParser(test.tokens)
 		expr, err := pr.ParseExprAndEof()
 		if assert.NoError(t, err) {
-			assert.Equal(t, expr, test.node)
+			assert.Equal(t, test.node, expr)
 		}
 	}
 }
@@ -230,7 +230,7 @@ func TestParseBlockStmt(t *testing.T) {
 		Left: wall.Token{Kind: wall.LEFTBRACE},
 		Stmts: []wall.ParsedStmt{
 			&wall.ParsedExprStmt{
-				Expr: &wall.ParsedLiteralExpr{
+				Expr: &wall.ParsedIdExpr{
 					Token: wall.Token{Kind: wall.IDENTIFIER},
 				},
 			},

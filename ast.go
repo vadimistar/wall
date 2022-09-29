@@ -146,6 +146,10 @@ type ParsedLiteralExpr struct {
 	Token
 }
 
+type ParsedIdExpr struct {
+	Token
+}
+
 type ParsedCallExpr struct {
 	Callee ParsedExpr
 	Args   []ParsedExpr
@@ -163,6 +167,9 @@ func (g ParsedGroupedExpr) pos() Pos {
 func (l ParsedLiteralExpr) pos() Pos {
 	return l.Token.Pos
 }
+func (i ParsedIdExpr) pos() Pos {
+	return i.Token.Pos
+}
 func (c ParsedCallExpr) pos() Pos {
 	return c.Callee.pos()
 }
@@ -171,6 +178,7 @@ func (u ParsedUnaryExpr) expr()   {}
 func (b ParsedBinaryExpr) expr()  {}
 func (g ParsedGroupedExpr) expr() {}
 func (l ParsedLiteralExpr) expr() {}
+func (i ParsedIdExpr) expr()      {}
 func (c ParsedCallExpr) expr()    {}
 
 type ParsedType interface {
