@@ -14,6 +14,7 @@ const (
 	NEWLINE
 	IDENTIFIER
 	INTEGER
+	STRING
 	FLOAT
 	PLUS
 	MINUS
@@ -46,6 +47,8 @@ func (t TokenKind) String() string {
 		return "INTEGER"
 	case FLOAT:
 		return "FLOAT"
+	case STRING:
+		return "STRING"
 	case PLUS:
 		return "+"
 	case MINUS:
@@ -171,6 +174,9 @@ func (s *Scanner) Scan() (Token, error) {
 	case ',':
 		s.advance()
 		t = s.token(COMMA)
+	case '"':
+		s.advance()
+		return s.string()
 	default:
 		if isId(c) {
 			return s.id(), nil
@@ -230,6 +236,21 @@ func (s *Scanner) num() Token {
 		return s.token(FLOAT)
 	}
 	return s.token(INTEGER)
+}
+
+func (s *Scanner) string() (Token, error) {
+	for s.next() != '"' && s.next() != 0 {
+		if s.advance() == '\n' {
+			s.pos.Line++
+		}
+	}
+	if s.next() == 0 {
+		return Token{}, NewError(s.pos, "a string literal is not terminated")
+	}
+	s.advance()
+	t := s.token(STRING)
+	t.Content = t.Content[1 : len(t.Content)-1]
+	return t, nil
 }
 
 func (s *Scanner) skipWhitespace() {

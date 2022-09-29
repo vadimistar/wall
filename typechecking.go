@@ -2,7 +2,9 @@ package wall
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
+	"strings"
 )
 
 func CheckCompilationUnit(f *ParsedFile) (*CheckedFile, error) {
@@ -428,6 +430,11 @@ func checkLiteralExpr(p *ParsedLiteralExpr, s *Scope) (*CheckedLiteralExpr, erro
 			Literal: p.Token,
 			Type:    name,
 		}, nil
+	case STRING:
+		return &CheckedLiteralExpr{
+			Literal: p.Token,
+			Type:    s.File.TypeId(&PointerType{Type: CHAR_TYPE_ID}),
+		}, nil
 	}
 	panic("unreachable")
 }
@@ -688,13 +695,21 @@ func (s *Scope) findTypeByName(name string) TypeId {
 }
 
 func (s *Scope) typeToString(typeId TypeId) string {
-	for name, t := range s.Types {
-		if t == typeId {
-			return name
+	switch t := s.File.Types[typeId].(type) {
+	case *BuildinType, *IdType, *StructType:
+		for name, t := range s.Types {
+			if t == typeId {
+				return name
+			}
 		}
-	}
-	if s.Parent != nil {
-		return s.typeToString(typeId)
+		if s.Parent != nil {
+			return s.Parent.typeToString(typeId)
+		}
+		panic("unreachable")
+	case *PointerType:
+		return "*" + s.typeToString(t.Type)
+	case *FunctionType:
+		return fmt.Sprintf("fun (%s) %s", strings.Join(s.typesToStrings(t.Params), ", "), s.typeToString(t.Returns))
 	}
 	panic("unreachable")
 }
@@ -766,11 +781,12 @@ func NewCheckedFile(filename string) *CheckedFile {
 
 func (c *CheckedFile) TypeId(t Type) TypeId {
 	for i, typ := range c.Types {
-		if t == typ {
+		if reflect.DeepEqual(t, typ) {
 			return TypeId(i)
 		}
 	}
-	return NOT_FOUND
+	c.Types = append(c.Types, t)
+	return TypeId(len(c.Types) - 1)
 }
 
 type CheckedImport struct {

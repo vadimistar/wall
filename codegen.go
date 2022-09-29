@@ -55,7 +55,7 @@ func codegenFuncTypedefs(c *CheckedFile, checkedFiles map[*CheckedFile]struct{})
 }
 
 func cFuncTypeId(id int, filename string) string {
-	return cId(fmt.Sprintf("_%s_FUNC_TYPE_%d", moduleNameFromFilename(filename), id))
+	return cId(fmt.Sprintf("%s_FUNC_TYPE_%d", moduleNameFromFilename(filename), id))
 }
 
 func WallPrefixesToGlobalNames(c *CheckedFile) {
@@ -363,13 +363,15 @@ func CodegenType(id TypeId, s *Scope) string {
 			return "int"
 		case FLOAT_TYPE_ID:
 			return "float"
+		case CHAR_TYPE_ID:
+			return "char"
 		default:
 			panic("unreachable")
 		}
 	case *IdType, *StructType:
 		return s.typeToString(id)
 	case *PointerType:
-		return "*" + CodegenType(t.Type, s)
+		return CodegenType(t.Type, s) + "*"
 	case *FunctionType:
 		return cFuncTypeId(int(id), s.File.Filename)
 	}

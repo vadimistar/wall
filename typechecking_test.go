@@ -385,6 +385,18 @@ func TestCheckExpr(t *testing.T) {
 	}
 }
 
+func TestCheckStringLiteralExpr(t *testing.T) {
+	checkedFile := wall.NewCheckedFile("")
+	expr, err := wall.CheckExpr(&wall.ParsedLiteralExpr{
+		Token: wall.Token{Kind: wall.STRING, Content: []byte("\"ABC\"")},
+	}, checkedFile.GlobalScope)
+	if assert.NoError(t, err) {
+		assert.Equal(t, checkedFile.TypeId(&wall.PointerType{
+			Type: wall.CHAR_TYPE_ID,
+		}), expr.TypeId())
+	}
+}
+
 func TestCheckVarStmt(t *testing.T) {
 	file := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{

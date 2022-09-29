@@ -33,6 +33,12 @@ var parseLiteralExprTests = []parseLiteralExprTest{
 	}, wall.ParsedLiteralExpr{
 		Token: wall.Token{Kind: wall.FLOAT, Content: []byte("1.0")},
 	}},
+	{[]wall.Token{
+		{Kind: wall.STRING, Content: []byte("ABC")},
+		{Kind: wall.EOF},
+	}, wall.ParsedLiteralExpr{
+		Token: wall.Token{Kind: wall.STRING, Content: []byte("ABC")},
+	}},
 }
 
 func TestParseLiteralExpr(t *testing.T) {
