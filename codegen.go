@@ -59,10 +59,7 @@ func cFuncTypeId(id int, filename string) string {
 }
 
 func WallPrefixesToGlobalNames(c *CheckedFile) {
-	for range c.Imports {
-		moduleNamesToGlobalNames(c, make(map[*CheckedFile]struct{}))
-		break
-	}
+	moduleNamesToGlobalNames(c, make(map[*CheckedFile]struct{}))
 	wallPrefixesToGlobalNames(c, make(map[*CheckedFile]struct{}))
 }
 
@@ -253,16 +250,16 @@ func moduleNamesToGlobalNames(c *CheckedFile, checkedFiles map[*CheckedFile]stru
 	}
 	checkedFiles[c] = struct{}{}
 	for _, def := range c.Structs {
-		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
 		if !c.GlobalScope.findAndRenameType(string(def.Name.Content), attachModuleName(def.Name.Content, def.Name.Filename)) {
 			panic("type not found")
 		}
+		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
 	}
 	for _, def := range c.Funs {
-		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
 		if !c.GlobalScope.findAndRenameFun(string(def.Name.Content), attachModuleName(def.Name.Content, def.Name.Filename)) {
 			panic("fun not found")
 		}
+		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
 	}
 	for _, imp := range c.Imports {
 		moduleNamesToGlobalNames(imp.File, checkedFiles)
