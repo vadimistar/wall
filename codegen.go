@@ -89,10 +89,16 @@ func CodegenExpr(expr CheckedExpr, s *Scope) string {
 		return codegenGroupedExpr(expr, s)
 	case *CheckedLiteralExpr:
 		return codegenLiteralExpr(expr, s)
+	case *CheckedIdExpr:
+		return codegenIdExpr(expr, s)
 	case *CheckedCallExpr:
 		return codegenCallExpr(expr, s)
 	}
 	panic("unreachable")
+}
+
+func codegenIdExpr(expr *CheckedIdExpr, s *Scope) string {
+	return string(expr.Id.Content)
 }
 
 func codegenUnaryExpr(expr *CheckedUnaryExpr, s *Scope) string {
@@ -377,7 +383,7 @@ func CodegenType(id TypeId, s *Scope) string {
 			panic("unreachable")
 		}
 	case *IdType, *StructType:
-		return s.typeToString(id)
+		return s.TypeToString(id)
 	case *PointerType:
 		return CodegenType(t.Type, s) + "*"
 	case *FunctionType:

@@ -117,14 +117,14 @@ func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Pa
 		case *ParsedFunDef:
 			checkedParams := make([]CheckedFunParam, 0, len(def.Params))
 			paramTypes := make([]TypeId, 0, len(def.Params))
-			for _, param := range def.Params {
+			for i, param := range def.Params {
 				paramType, err := checkType(param.Type, c.GlobalScope)
 				if err != nil {
 					return err
 				}
 				paramTypes = append(paramTypes, paramType)
 				checkedParams = append(checkedParams, CheckedFunParam{
-					Name: param.Id,
+					Name: &def.Params[i].Id,
 					Type: paramType,
 				})
 			}
@@ -136,18 +136,19 @@ func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Pa
 					return err
 				}
 			}
-			if err := c.GlobalScope.DefineFunction(string(def.id()), def.Id.Pos, &FunctionType{
+			checkedFunDef := &CheckedFunDef{
+				Name:       &def.Id,
+				Params:     checkedParams,
+				ReturnType: returnType,
+				Body:       &CheckedBlock{},
+			}
+			if err := c.GlobalScope.DefineFunction(&def.Id, &FunctionType{
 				Params:  paramTypes,
 				Returns: returnType,
 			}); err != nil {
 				return err
 			}
-			c.Funs = append(c.Funs, &CheckedFunDef{
-				Name:       def.Id,
-				Params:     checkedParams,
-				ReturnType: returnType,
-				Body:       &CheckedBlock{},
-			})
+			c.Funs = append(c.Funs, checkedFunDef)
 		}
 	}
 	return nil
@@ -230,12 +231,8 @@ func checkBlocks(p *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFile]str
 
 func checkFunBlock(p *ParsedFunDef, c *CheckedFunDef, s *Scope) error {
 	paramsScope := NewScope(s)
-	for _, param := range p.Params {
-		t, err := checkType(param.Type, s)
-		if err != nil {
-			return err
-		}
-		if err := paramsScope.DefineVar(string(param.Id.Content), param.Id.Pos, t); err != nil {
+	for _, param := range c.Params {
+		if err := paramsScope.DefineVar(param.Name, param.Type); err != nil {
 			return err
 		}
 	}
@@ -266,7 +263,7 @@ func checkBlock(p *ParsedBlock, s *Scope, controlFlow ControlFlow) (*CheckedBloc
 		switch controlFlow := controlFlow.(type) {
 		case *MustReturn:
 			if controlFlow.Type != UNIT_TYPE_ID {
-				return nil, NewError(p.pos(), "%s is returned from empty block, but %s is expected", s.typeToString(UNIT_TYPE_ID), s.typeToString(controlFlow.Type))
+				return nil, NewError(p.pos(), "%s is returned from empty block, but %s is expected", s.TypeToString(UNIT_TYPE_ID), s.TypeToString(controlFlow.Type))
 			}
 			return checkedBlock, nil
 		}
@@ -313,7 +310,7 @@ func CheckStmt(stmt ParsedStmt, scope *Scope, controlFlow ControlFlow) (CheckedS
 func checkReturn(p *ParsedReturn, s *Scope, controlFlow ControlFlow) (*CheckedReturn, error) {
 	if p.Arg == nil {
 		if controlFlow.typeId() != UNIT_TYPE_ID {
-			return nil, NewError(p.pos(), "expected return with an argument of type %s", s.typeToString(controlFlow.typeId()))
+			return nil, NewError(p.pos(), "expected return with an argument of type %s", s.TypeToString(controlFlow.typeId()))
 		}
 		return &CheckedReturn{
 			Value: nil,
@@ -324,7 +321,7 @@ func checkReturn(p *ParsedReturn, s *Scope, controlFlow ControlFlow) (*CheckedRe
 		return nil, err
 	}
 	if controlFlow.typeId() != arg.TypeId() {
-		return nil, NewError(p.Arg.pos(), "expected %s, but got %s", s.typeToString(controlFlow.typeId()), s.typeToString(arg.TypeId()))
+		return nil, NewError(p.Arg.pos(), "expected %s, but got %s", s.TypeToString(controlFlow.typeId()), s.TypeToString(arg.TypeId()))
 	}
 	return &CheckedReturn{
 		Value: arg,
@@ -346,14 +343,15 @@ func checkVar(p *ParsedVar, s *Scope, controlFlow ControlFlow) (*CheckedVar, err
 	if err != nil {
 		return nil, err
 	}
-	if err := s.DefineVar(string(p.Id.Content), p.pos(), val.TypeId()); err != nil {
-		return nil, err
-	}
-	return &CheckedVar{
-		Name:  p.Id,
+	checked := &CheckedVar{
+		Name:  &p.Id,
 		Type:  val.TypeId(),
 		Value: val,
-	}, nil
+	}
+	if err := s.DefineVar(checked.Name, val.TypeId()); err != nil {
+		return nil, err
+	}
+	return checked, nil
 }
 
 func CheckExpr(p ParsedExpr, s *Scope) (CheckedExpr, error) {
@@ -366,10 +364,23 @@ func CheckExpr(p ParsedExpr, s *Scope) (CheckedExpr, error) {
 		return checkGroupedExpr(p, s)
 	case *ParsedLiteralExpr:
 		return checkLiteralExpr(p, s)
+	case *ParsedIdExpr:
+		return checkIdExpr(p, s)
 	case *ParsedCallExpr:
 		return checkCallExpr(p, s)
 	}
 	panic("unreachable")
+}
+
+func checkIdExpr(p *ParsedIdExpr, s *Scope) (*CheckedIdExpr, error) {
+	name := s.findName(string(p.Content))
+	if name.TypeId == NOT_FOUND {
+		return nil, NewError(p.pos(), "undeclared: %s", p.Content)
+	}
+	return &CheckedIdExpr{
+		Id:   name.Token,
+		Type: name.TypeId,
+	}, nil
 }
 
 func checkCallExpr(p *ParsedCallExpr, s *Scope) (*CheckedCallExpr, error) {
@@ -399,12 +410,12 @@ func checkCallExpr(p *ParsedCallExpr, s *Scope) (*CheckedCallExpr, error) {
 			Type:   funType.Returns,
 		}, nil
 	}
-	return nil, NewError(p.pos(), "callee is not of a function: %s", s.typeToString(callee.TypeId()))
+	return nil, NewError(p.pos(), "callee is not of a function: %s", s.TypeToString(callee.TypeId()))
 }
 
 func (s *Scope) typesToStrings(types []TypeId) (res []string) {
 	for _, t := range types {
-		res = append(res, s.typeToString(t))
+		res = append(res, s.TypeToString(t))
 	}
 	return
 }
@@ -420,15 +431,6 @@ func checkLiteralExpr(p *ParsedLiteralExpr, s *Scope) (*CheckedLiteralExpr, erro
 		return &CheckedLiteralExpr{
 			Literal: p.Token,
 			Type:    FLOAT_TYPE_ID,
-		}, nil
-	case IDENTIFIER:
-		name := s.findName(string(p.Content))
-		if name == NOT_FOUND {
-			return nil, NewError(p.pos(), "undeclared: %s", p.Content)
-		}
-		return &CheckedLiteralExpr{
-			Literal: p.Token,
-			Type:    name,
 		}, nil
 	case STRING:
 		return &CheckedLiteralExpr{
@@ -473,27 +475,27 @@ func checkBinaryExpr(p *ParsedBinaryExpr, s *Scope) (*CheckedBinaryExpr, error) 
 
 func checkBinaryOperator(operator Token, left, right TypeId, s *Scope) (CheckedBinaryOperator, error) {
 	if left != right {
-		return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator %s is not defined for types %s and %s", operator.Kind, s.typeToString(left), s.typeToString(right))
+		return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator %s is not defined for types %s and %s", operator.Kind, s.TypeToString(left), s.TypeToString(right))
 	}
 	switch operator.Kind {
 	case PLUS:
 		if !traitIsImplemented(ADD_TRAIT, left) {
-			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator + is not defined for types %s and %s (try to implement %s trait)", s.typeToString(left), s.typeToString(right), ADD_TRAIT)
+			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator + is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), ADD_TRAIT)
 		}
 		return CHECKED_ADD, nil
 	case MINUS:
 		if !traitIsImplemented(SUBTRACT_TRAIT, left) {
-			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator - is not defined for types %s and %s (try to implement %s trait)", s.typeToString(left), s.typeToString(right), SUBTRACT_TRAIT)
+			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator - is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), SUBTRACT_TRAIT)
 		}
 		return CHECKED_SUBTRACT, nil
 	case STAR:
 		if !traitIsImplemented(MULTIPLY_TRAIT, left) {
-			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator * is not defined for types %s and %s (try to implement %s trait)", s.typeToString(left), s.typeToString(right), MULTIPLY_TRAIT)
+			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator * is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), MULTIPLY_TRAIT)
 		}
 		return CHECKED_MULTIPLY, nil
 	case SLASH:
 		if !traitIsImplemented(DIVIDE_TRAIT, left) {
-			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator / is not defined for types %s and %s (try to implement %s trait)", s.typeToString(left), s.typeToString(right), DIVIDE_TRAIT)
+			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator / is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), DIVIDE_TRAIT)
 		}
 		return CHECKED_DIVIDE, nil
 	}
@@ -520,7 +522,7 @@ func checkUnaryOperator(operator Token, operand TypeId, s *Scope) (CheckedUnaryO
 	switch operator.Kind {
 	case MINUS:
 		if !traitIsImplemented(NEGATE_TRAIT, operand) {
-			return INVALID_UNARY_OPERATOR, NewError(operator.Pos, "operator - is not defined for type %s (try to implement %s trait)", s.typeToString(operand), NEGATE_TRAIT)
+			return INVALID_UNARY_OPERATOR, NewError(operator.Pos, "operator - is not defined for type %s (try to implement %s trait)", s.TypeToString(operand), NEGATE_TRAIT)
 		}
 		return CHECKED_NEGATE, nil
 	}
@@ -591,13 +593,18 @@ func checkType(t ParsedType, s *Scope) (TypeId, error) {
 	panic("unreachable")
 }
 
+type Name struct {
+	Token *Token
+	TypeId
+}
+
 type Scope struct {
 	Parent   *Scope
 	Children []*Scope
 	File     *CheckedFile
 	Types    map[string]TypeId
-	Funs     map[string]TypeId
-	Vars     map[string]TypeId
+	Funs     map[string]*Name
+	Vars     map[string]*Name
 	Imports  map[string]ImportId
 }
 
@@ -606,8 +613,8 @@ func NewScope(parent *Scope) *Scope {
 		Parent:   parent,
 		Children: make([]*Scope, 0),
 		Types:    make(map[string]TypeId),
-		Funs:     make(map[string]TypeId),
-		Vars:     make(map[string]TypeId),
+		Funs:     make(map[string]*Name),
+		Vars:     make(map[string]*Name),
 		Imports:  make(map[string]ImportId),
 	}
 	if parent != nil {
@@ -635,51 +642,57 @@ func (s *Scope) DefineType(name string, pos Pos, typ Type) error {
 	return nil
 }
 
-func (s *Scope) DefineFunction(name string, pos Pos, typ *FunctionType) error {
-	if s.findName(name) != NOT_FOUND {
-		return NewError(pos, "%s is already declared", name)
+func (s *Scope) DefineFunction(token *Token, typ *FunctionType) error {
+	if s.findName(string(token.Content)) != nil {
+		return NewError(token.Pos, "%s is already declared", token.Content)
 	}
 	s.File.Types = append(s.File.Types, typ)
-	s.Funs[name] = TypeId(len(s.File.Types) - 1)
+	s.Funs[string(token.Content)] = &Name{
+		Token:  token,
+		TypeId: TypeId(len(s.File.Types) - 1),
+	}
 	return nil
 }
 
-func (s *Scope) DefineVar(name string, pos Pos, typ TypeId) error {
-	if s.findName(name) != NOT_FOUND {
-		return NewError(pos, "%s is already declared", name)
+func (s *Scope) DefineVar(token *Token, typ TypeId) error {
+	if s.findName(string(token.Content)) != nil {
+		return NewError(token.Pos, "%s is already declared", token.Content)
 	}
-	s.Vars[name] = typ
+	s.Vars[string(token.Content)] = &Name{
+		Token:  token,
+		TypeId: typ,
+	}
 	return nil
 }
 
-func (s *Scope) findName(name string) TypeId {
-	if t := s.findFunction(name); t != NOT_FOUND {
+func (s *Scope) findName(name string) *Name {
+	if t := s.findFunction(name); t != nil {
 		return t
 	}
-	if t := s.findVar(name); t != NOT_FOUND {
+	if t := s.findVar(name); t != nil {
 		return t
 	}
-	return NOT_FOUND
+	return nil
 }
 
-func (s *Scope) findFunction(name string) TypeId {
+func (s *Scope) findFunction(name string) *Name {
 	if f, ok := s.Funs[name]; ok {
 		return f
 	}
 	if s.Parent != nil {
 		return s.Parent.findFunction(name)
 	}
-	return NOT_FOUND
+	return nil
 }
 
-func (s *Scope) findVar(name string) TypeId {
+func (s *Scope) findVar(name string) *Name {
 	if v, ok := s.Vars[name]; ok {
 		return v
 	}
 	if s.Parent != nil {
 		return s.Parent.findVar(name)
 	}
-	return NOT_FOUND
+	return nil
 }
 
 func (s *Scope) findImport(name string) ImportId {
@@ -702,7 +715,7 @@ func (s *Scope) findTypeByName(name string) TypeId {
 	return NOT_FOUND
 }
 
-func (s *Scope) typeToString(typeId TypeId) string {
+func (s *Scope) TypeToString(typeId TypeId) string {
 	switch t := s.File.Types[typeId].(type) {
 	case *BuildinType, *IdType, *StructType:
 		for name, t := range s.Types {
@@ -711,13 +724,13 @@ func (s *Scope) typeToString(typeId TypeId) string {
 			}
 		}
 		if s.Parent != nil {
-			return s.Parent.typeToString(typeId)
+			return s.Parent.TypeToString(typeId)
 		}
 		panic("unreachable")
 	case *PointerType:
-		return "*" + s.typeToString(t.Type)
+		return "*" + s.TypeToString(t.Type)
 	case *FunctionType:
-		return fmt.Sprintf("fun (%s) %s", strings.Join(s.typesToStrings(t.Params), ", "), s.typeToString(t.Returns))
+		return fmt.Sprintf("fun (%s) %s", strings.Join(s.typesToStrings(t.Params), ", "), s.TypeToString(t.Returns))
 	}
 	panic("unreachable")
 }
@@ -780,7 +793,7 @@ func NewCheckedFile(filename string) *CheckedFile {
 	constChar := c.TypeId(&PointerType{
 		Type: CHAR_TYPE_ID,
 	})
-	c.GlobalScope.DefineFunction("inlineC", Pos{}, &FunctionType{
+	c.GlobalScope.DefineFunction(&Token{Content: []byte("inlineC")}, &FunctionType{
 		Params:  []TypeId{constChar},
 		Returns: UNIT_TYPE_ID,
 	})
@@ -803,14 +816,14 @@ type CheckedImport struct {
 }
 
 type CheckedFunDef struct {
-	Name       Token
+	Name       *Token
 	Params     []CheckedFunParam
 	ReturnType TypeId
 	Body       *CheckedBlock
 }
 
 type CheckedFunParam struct {
-	Name Token
+	Name *Token
 	Type TypeId
 }
 
@@ -829,7 +842,7 @@ type CheckedStmt interface {
 }
 
 type CheckedVar struct {
-	Name  Token
+	Name  *Token
 	Type  TypeId
 	Value CheckedExpr
 }
@@ -899,6 +912,11 @@ type CheckedLiteralExpr struct {
 	Type    TypeId
 }
 
+type CheckedIdExpr struct {
+	Id   *Token
+	Type TypeId
+}
+
 type CheckedCallExpr struct {
 	Callee CheckedExpr
 	Args   []CheckedExpr
@@ -909,6 +927,7 @@ func (c *CheckedUnaryExpr) checkedExpr()   {}
 func (c *CheckedBinaryExpr) checkedExpr()  {}
 func (c *CheckedGroupedExpr) checkedExpr() {}
 func (c *CheckedLiteralExpr) checkedExpr() {}
+func (c *CheckedIdExpr) checkedExpr()      {}
 func (c *CheckedCallExpr) checkedExpr()    {}
 
 func (c *CheckedUnaryExpr) TypeId() TypeId {
@@ -921,6 +940,9 @@ func (c *CheckedGroupedExpr) TypeId() TypeId {
 	return c.Inner.TypeId()
 }
 func (c *CheckedLiteralExpr) TypeId() TypeId {
+	return c.Type
+}
+func (c *CheckedIdExpr) TypeId() TypeId {
 	return c.Type
 }
 func (c *CheckedCallExpr) TypeId() TypeId {

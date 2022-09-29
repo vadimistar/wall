@@ -69,7 +69,7 @@ func TestCheckFunctionSignatures(t *testing.T) {
 	typeIdB := checkedFile.GlobalScope.Types["B"]
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	if fun, ok := checkedFile.GlobalScope.Funs["a"]; assert.Equal(t, ok, true) {
-		assert.Equal(t, checkedFile.Types[fun], &wall.FunctionType{
+		assert.Equal(t, checkedFile.Types[fun.TypeId], &wall.FunctionType{
 			Params: []wall.TypeId{
 				typeIdA,
 			},
@@ -411,7 +411,7 @@ func TestCheckVarStmt(t *testing.T) {
 							},
 						},
 						&wall.ParsedReturn{
-							Arg: &wall.ParsedLiteralExpr{
+							Arg: &wall.ParsedIdExpr{
 								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
 							},
 						},
@@ -457,7 +457,7 @@ func TestCheckCallExpr(t *testing.T) {
 					Stmts: []wall.ParsedStmt{
 						&wall.ParsedExprStmt{
 							Expr: &wall.ParsedCallExpr{
-								Callee: &wall.ParsedLiteralExpr{
+								Callee: &wall.ParsedIdExpr{
 									Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("sum")},
 								},
 								Args: []wall.ParsedExpr{
@@ -478,4 +478,41 @@ func TestCheckCallExpr(t *testing.T) {
 	checkedFile := wall.NewCheckedFile("")
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
+}
+
+func TestCheckIdExpr(t *testing.T) {
+	file := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedFunDef{
+				Id:     wall.Token{Content: []byte("a")},
+				Params: []wall.ParsedFunParam{},
+				Body:   &wall.ParsedBlock{},
+			},
+			&wall.ParsedFunDef{
+				Id: wall.Token{Content: []byte("b")},
+				Body: &wall.ParsedBlock{
+					Stmts: []wall.ParsedStmt{
+						&wall.ParsedExprStmt{
+							Expr: &wall.ParsedIdExpr{
+								Token: wall.Token{Content: []byte("a")},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	checkedFile := wall.NewCheckedFile("")
+	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
+	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
+	checkedFile.Funs[0].Name.Content = []byte("c")
+	assert.Equal(t, &wall.CheckedExprStmt{
+		Expr: &wall.CheckedIdExpr{
+			Id: checkedFile.Funs[0].Name,
+			Type: checkedFile.TypeId(&wall.FunctionType{
+				Params:  []wall.TypeId{},
+				Returns: wall.UNIT_TYPE_ID,
+			}),
+		},
+	}, checkedFile.Funs[1].Body.Stmts[0])
 }
