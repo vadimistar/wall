@@ -133,8 +133,14 @@ func codegenLiteralExpr(expr *CheckedLiteralExpr, s *Scope) string {
 }
 
 func codegenCallExpr(expr *CheckedCallExpr, s *Scope) string {
+	callee := CodegenExpr(expr.Callee, s)
+	if callee == "inlineC" {
+		inlineC := CodegenExpr(expr.Args[0], s)
+		inlineC = inlineC[1 : len(inlineC)-1]
+		return inlineC
+	}
 	var builder strings.Builder
-	builder.WriteString(CodegenExpr(expr.Callee, s))
+	builder.WriteString(callee)
 	builder.WriteString("(")
 	for i, arg := range expr.Args {
 		builder.WriteString(CodegenExpr(arg, s))
