@@ -544,6 +544,15 @@ func (p *Parser) parseFunParams() (params []ParsedFunParam, err error) {
 
 func (p *Parser) parseType() (ParsedType, error) {
 	switch p.next().Kind {
+	case LEFTPAREN:
+		l := p.advance()
+		_, err := p.match(RIGHTPAREN)
+		if err != nil {
+			return nil, err
+		}
+		return &ParsedIdType{
+			Token: Token{Kind: IDENTIFIER, Content: []byte("()"), Pos: l.Pos},
+		}, nil
 	case IDENTIFIER:
 		tok := p.advance()
 		return &ParsedIdType{
