@@ -1,6 +1,7 @@
 package wall
 
 import (
+	"bytes"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -49,7 +50,7 @@ func codegenFuncTypedefs(c *CheckedFile, checkedFiles map[*CheckedFile]struct{})
 		}
 	}
 	for _, imp := range c.Imports {
-		builder.WriteString(codegenFuncDefinitions(imp.File, checkedFiles))
+		builder.WriteString(codegenFuncTypedefs(imp.File, checkedFiles))
 	}
 	return builder.String()
 }
@@ -267,6 +268,9 @@ func wallPrefixesToGlobalNames(c *CheckedFile, checkedFiles map[*CheckedFile]str
 		def.Name.Content = []byte(attachWallPrefix(def.Name.Content))
 	}
 	for _, def := range c.Funs {
+		if len(checkedFiles) == 1 /* this is a root module */ && bytes.Equal(def.Name.Content, []byte("main")) {
+			continue
+		}
 		if !c.GlobalScope.findAndRenameFun(string(def.Name.Content), attachWallPrefix(def.Name.Content)) {
 			panic(fmt.Sprintf("fun not found: %s", def.Name.Content))
 		}
@@ -289,6 +293,9 @@ func moduleNamesToGlobalNames(c *CheckedFile, checkedFiles map[*CheckedFile]stru
 		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
 	}
 	for _, def := range c.Funs {
+		if len(checkedFiles) == 1 /* this is a root module */ && bytes.Equal(def.Name.Content, []byte("main")) {
+			continue
+		}
 		if !c.GlobalScope.findAndRenameFun(string(def.Name.Content), attachModuleName(def.Name.Content, def.Name.Filename)) {
 			panic("fun not found")
 		}
@@ -339,20 +346,6 @@ func codegenFuncDeclarations(c *CheckedFile, checkedFiles map[*CheckedFile]struc
 	checkedFiles[c] = struct{}{}
 	var builder strings.Builder
 	for _, def := range c.Funs {
-		fmt.Fprintf(&builder, "%s %s(", CodegenType(def.ReturnType, c.GlobalScope), string(def.Name.Content))
-		if len(def.Params) == 0 {
-			builder.WriteString(CodegenType(UNIT_TYPE_ID, c.GlobalScope))
-		}
-		for i, param := range def.Params {
-			fmt.Fprintf(&builder, "%s", CodegenType(param.Type, c.GlobalScope))
-			if i < len(def.Params)-1 {
-				builder.WriteString(", ")
-			}
-		}
-		builder.WriteString(");\n")
-	}
-	builder.WriteString("/* extern functions */\n")
-	for _, def := range c.ExternFuns {
 		fmt.Fprintf(&builder, "%s %s(", CodegenType(def.ReturnType, c.GlobalScope), string(def.Name.Content))
 		if len(def.Params) == 0 {
 			builder.WriteString(CodegenType(UNIT_TYPE_ID, c.GlobalScope))

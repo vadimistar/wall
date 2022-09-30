@@ -22,6 +22,7 @@ func main() {
 	check(err)
 	checkedFile, err := wall.CheckCompilationUnit(parsedFile)
 	check(err)
+	wall.LowerExternFunctions(checkedFile)
 	cSource := wall.CodegenCompilationUnit(checkedFile)
 	fmt.Println(cSource)
 }

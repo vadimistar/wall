@@ -102,17 +102,17 @@ func handleImport(p *ParsedImport, c *CheckedFile, checkedFiles map[*ParsedFile]
 }
 
 func CheckFunctionSignatures(p *ParsedFile, c *CheckedFile) error {
-	return checkFunctionSignatures(p, c, make(map[*ParsedFile]struct{}))
+	return checkFunctionSignatures(p, c, make(map[*ParsedFile]struct{}), c)
 }
 
-func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFile]struct{}) error {
+func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFile]struct{}, mainFile *CheckedFile) error {
 	if isChecked(p, checkedFiles) {
 		return nil
 	}
 	for _, def := range p.Defs {
 		switch def := def.(type) {
 		case *ParsedImport:
-			if err := handleImport(def, c, checkedFiles, checkFunctionSignatures); err != nil {
+			if err := checkFunctionSignatures(def.File, c.Imports[c.GlobalScope.Imports[string(def.id())]].File, checkedFiles, mainFile); err != nil {
 				return err
 			}
 		case *ParsedFunDef:
@@ -134,6 +134,11 @@ func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Pa
 				var err error
 				returnType, err = checkType(def.ReturnType, c.GlobalScope)
 				if err != nil {
+					return err
+				}
+			}
+			if bytes.Equal(def.Id.Content, []byte("main")) && c == mainFile {
+				if err := validateMain(def.pos(), paramTypes, returnType, c); err != nil {
 					return err
 				}
 			}
@@ -185,6 +190,19 @@ func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Pa
 			}
 			c.ExternFuns = append(c.ExternFuns, checkedFunDef)
 		}
+	}
+	return nil
+}
+
+func validateMain(pos Pos, paramTypes []TypeId, returnType TypeId, c *CheckedFile) error {
+	constChar := c.TypeId(&PointerType{
+		Type: CHAR_TYPE_ID,
+	})
+	if !reflect.DeepEqual(paramTypes, []TypeId{}) && !reflect.DeepEqual(paramTypes, []TypeId{INT_TYPE_ID, constChar}) {
+		return NewError(pos, "invalid params in main function: %s (expected [] or [int, **char])", c.GlobalScope.typesToStrings(paramTypes))
+	}
+	if !reflect.DeepEqual(returnType, INT_TYPE_ID) {
+		return NewError(pos, "invalid return type in main function: %s (expected int)", c.GlobalScope.TypeToString(returnType))
 	}
 	return nil
 }
@@ -265,9 +283,9 @@ func checkBlocks(p *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFile]str
 }
 
 func checkFunBlock(p *ParsedFunDef, c *CheckedFunDef, s *Scope) error {
-	paramsScope := NewScope(s)
+	s = NewScope(s)
 	for _, param := range c.Params {
-		if err := paramsScope.DefineVar(param.Name, param.Type); err != nil {
+		if err := s.DefineVar(param.Name, param.Type); err != nil {
 			return err
 		}
 	}
@@ -882,7 +900,7 @@ func NewCheckedFile(filename string) *CheckedFile {
 	c.GlobalScope.DefineType(&Token{Content: []byte("()")}, &BuildinType{})
 	c.GlobalScope.DefineType(&Token{Content: []byte("int")}, &BuildinType{})
 	c.GlobalScope.DefineType(&Token{Content: []byte("float")}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: []byte("string")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: []byte("char")}, &BuildinType{})
 	constChar := c.TypeId(&PointerType{
 		Type: CHAR_TYPE_ID,
 	})
