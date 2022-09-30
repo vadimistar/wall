@@ -373,6 +373,78 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.EQEQ},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.BANGEQ},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.LT},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.LTEQ},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.GT},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.GTEQ},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 			Op: wall.Token{Kind: wall.PLUS},
@@ -417,6 +489,78 @@ var checkExprTests = []checkExprTest{
 			},
 		},
 		typeid: wall.FLOAT_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.EQEQ},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.BANGEQ},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.LT},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.LTEQ},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.GT},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
+	},
+	{
+		expr: &wall.ParsedBinaryExpr{
+			Left: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+			Op: wall.Token{Kind: wall.GTEQ},
+			Right: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+			},
+		},
+		typeid: wall.BOOL_TYPE_ID,
 	},
 }
 

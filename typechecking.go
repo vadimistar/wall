@@ -321,9 +321,10 @@ func checkBlock(p *ParsedBlock, s *Scope, controlFlow ControlFlow) (*CheckedBloc
 			return checkedBlock, nil
 		}
 	}
+	_, mustReturn := controlFlow.(*MustReturn)
 	for i, stmt := range p.Stmts {
 		var cf ControlFlow
-		if i >= len(p.Stmts)-1 && controlFlow.typeId() != UNIT_TYPE_ID {
+		if mustReturn && i+1 >= len(p.Stmts) && controlFlow.typeId() != UNIT_TYPE_ID {
 			cf = &MustReturn{Type: controlFlow.typeId()}
 		} else {
 			cf = &MayReturn{Type: controlFlow.typeId()}
@@ -614,7 +615,7 @@ func checkBinaryExpr(p *ParsedBinaryExpr, s *Scope) (*CheckedBinaryExpr, error) 
 	if err != nil {
 		return nil, err
 	}
-	operator, err := checkBinaryOperator(p.Op, left.TypeId(), right.TypeId(), s)
+	operator, returnType, err := checkBinaryOperator(p.Op, left.TypeId(), right.TypeId(), s)
 	if err != nil {
 		return nil, err
 	}
@@ -622,34 +623,61 @@ func checkBinaryExpr(p *ParsedBinaryExpr, s *Scope) (*CheckedBinaryExpr, error) 
 		Left:  left,
 		Op:    operator,
 		Right: right,
+		Type:  returnType,
 	}, nil
 }
 
-func checkBinaryOperator(operator Token, left, right TypeId, s *Scope) (CheckedBinaryOperator, error) {
+func checkBinaryOperator(operator Token, left, right TypeId, s *Scope) (CheckedBinaryOperator, TypeId, error) {
 	if left != right {
-		return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator %s is not defined for types %s and %s", operator.Kind, s.TypeToString(left), s.TypeToString(right))
+		return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator %s is not defined for types %s and %s", operator.Kind, s.TypeToString(left), s.TypeToString(right))
 	}
 	switch operator.Kind {
 	case PLUS:
-		if !traitIsImplemented(ADD_TRAIT, left) {
-			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator + is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), ADD_TRAIT)
+		if !traitIsImplemented(ADD_TRAIT, left, s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator + is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), ADD_TRAIT)
 		}
-		return CHECKED_ADD, nil
+		return CHECKED_ADD, left, nil
 	case MINUS:
-		if !traitIsImplemented(SUBTRACT_TRAIT, left) {
-			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator - is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), SUBTRACT_TRAIT)
+		if !traitIsImplemented(SUBTRACT_TRAIT, left, s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator - is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), SUBTRACT_TRAIT)
 		}
-		return CHECKED_SUBTRACT, nil
+		return CHECKED_SUBTRACT, left, nil
 	case STAR:
-		if !traitIsImplemented(MULTIPLY_TRAIT, left) {
-			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator * is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), MULTIPLY_TRAIT)
+		if !traitIsImplemented(MULTIPLY_TRAIT, left, s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator * is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), MULTIPLY_TRAIT)
 		}
-		return CHECKED_MULTIPLY, nil
+		return CHECKED_MULTIPLY, left, nil
 	case SLASH:
-		if !traitIsImplemented(DIVIDE_TRAIT, left) {
-			return INVALID_BINARY_OPERATOR, NewError(operator.Pos, "operator / is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), DIVIDE_TRAIT)
+		if !traitIsImplemented(DIVIDE_TRAIT, left, s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator / is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), DIVIDE_TRAIT)
 		}
-		return CHECKED_DIVIDE, nil
+		return CHECKED_DIVIDE, left, nil
+	case EQEQ, BANGEQ:
+		if !traitIsImplemented(EQUALS_TRAIT, left, s) && !traitIsImplemented(ORDERING_TRAIT, left, s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator %s is not defined for types %s and %s (try to implement %s trait)", operator.Kind, s.TypeToString(left), s.TypeToString(right), EQUALS_TRAIT)
+		}
+		if operator.Kind == EQEQ {
+			return CHECKED_EQUALS, BOOL_TYPE_ID, nil
+		}
+		if operator.Kind == BANGEQ {
+			return CHECKED_NOTEQUALS, BOOL_TYPE_ID, nil
+		}
+	case LT, LTEQ, GT, GTEQ:
+		if !traitIsImplemented(ORDERING_TRAIT, left, s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator %s is not defined for types %s and %s (try to implement %s trait)", operator.Kind, s.TypeToString(left), s.TypeToString(right), ORDERING_TRAIT)
+		}
+		if operator.Kind == LT {
+			return CHECKED_LESSTHAN, BOOL_TYPE_ID, nil
+		}
+		if operator.Kind == LTEQ {
+			return CHECKED_LESSOREQUAL, BOOL_TYPE_ID, nil
+		}
+		if operator.Kind == GT {
+			return CHECKED_GREATERTHAN, BOOL_TYPE_ID, nil
+		}
+		if operator.Kind == GTEQ {
+			return CHECKED_GREATEROREQUAL, BOOL_TYPE_ID, nil
+		}
 	}
 	panic("unreachable")
 }
@@ -673,7 +701,7 @@ func checkUnaryExpr(p *ParsedUnaryExpr, s *Scope) (*CheckedUnaryExpr, error) {
 func checkUnaryOperator(operator Token, operand TypeId, s *Scope) (CheckedUnaryOperator, error) {
 	switch operator.Kind {
 	case MINUS:
-		if !traitIsImplemented(NEGATE_TRAIT, operand) {
+		if !traitIsImplemented(NEGATE_TRAIT, operand, s) {
 			return INVALID_UNARY_OPERATOR, NewError(operator.Pos, "operator - is not defined for type %s (try to implement %s trait)", s.TypeToString(operand), NEGATE_TRAIT)
 		}
 		return CHECKED_NEGATE, nil
@@ -681,10 +709,15 @@ func checkUnaryOperator(operator Token, operand TypeId, s *Scope) (CheckedUnaryO
 	panic("unreachable")
 }
 
-func traitIsImplemented(trait string, typeId TypeId) bool {
+func traitIsImplemented(trait string, typeId TypeId, s *Scope) bool {
 	switch trait {
-	case NEGATE_TRAIT, ADD_TRAIT, SUBTRACT_TRAIT, MULTIPLY_TRAIT, DIVIDE_TRAIT:
+	case NEGATE_TRAIT, ADD_TRAIT, SUBTRACT_TRAIT, MULTIPLY_TRAIT, DIVIDE_TRAIT, ORDERING_TRAIT:
 		return typeId == INT_TYPE_ID || typeId == FLOAT_TYPE_ID
+	case EQUALS_TRAIT:
+		if _, isPointee := s.File.Types[typeId].(*FunctionType); isPointee {
+			return true
+		}
+		return typeId == INT_TYPE_ID || typeId == FLOAT_TYPE_ID || typeId == CHAR_TYPE_ID || typeId == BOOL_TYPE_ID
 	}
 	return false
 }
@@ -694,6 +727,8 @@ const ADD_TRAIT = "Add"
 const SUBTRACT_TRAIT = "Subtract"
 const MULTIPLY_TRAIT = "Multiply"
 const DIVIDE_TRAIT = "Divide"
+const EQUALS_TRAIT = "Equals"
+const ORDERING_TRAIT = "Ordering"
 
 type ControlFlow interface {
 	controlFlow()
@@ -1065,6 +1100,7 @@ type CheckedBinaryExpr struct {
 	Left  CheckedExpr
 	Op    CheckedBinaryOperator
 	Right CheckedExpr
+	Type  TypeId
 }
 
 type CheckedBinaryOperator int
@@ -1076,6 +1112,12 @@ const (
 	CHECKED_SUBTRACT
 	CHECKED_MULTIPLY
 	CHECKED_DIVIDE
+	CHECKED_EQUALS
+	CHECKED_NOTEQUALS
+	CHECKED_LESSTHAN
+	CHECKED_LESSOREQUAL
+	CHECKED_GREATERTHAN
+	CHECKED_GREATEROREQUAL
 )
 
 type CheckedGroupedExpr struct {
@@ -1125,7 +1167,7 @@ func (c *CheckedUnaryExpr) TypeId() TypeId {
 	return c.Operand.TypeId()
 }
 func (c *CheckedBinaryExpr) TypeId() TypeId {
-	return c.Left.TypeId()
+	return c.Type
 }
 func (c *CheckedGroupedExpr) TypeId() TypeId {
 	return c.Inner.TypeId()

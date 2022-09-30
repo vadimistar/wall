@@ -436,6 +436,10 @@ func precedence(t TokenKind) int {
 		return 20
 	case PLUS, MINUS:
 		return 10
+	case LT, LTEQ, GT, GTEQ:
+		return 6
+	case EQEQ, BANGEQ:
+		return 5
 	case EQ:
 		return 1
 	}

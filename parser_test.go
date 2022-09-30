@@ -52,7 +52,6 @@ func TestParseLiteralAndIdExpr(t *testing.T) {
 }
 
 var unaryOps = []wall.Token{
-	{Kind: wall.PLUS},
 	{Kind: wall.MINUS},
 }
 
@@ -69,6 +68,14 @@ func TestParseUnaryExpr(t *testing.T) {
 var binaryOps = []wall.Token{
 	{Kind: wall.PLUS},
 	{Kind: wall.MINUS},
+	{Kind: wall.STAR},
+	{Kind: wall.SLASH},
+	{Kind: wall.EQEQ},
+	{Kind: wall.BANGEQ},
+	{Kind: wall.LT},
+	{Kind: wall.LTEQ},
+	{Kind: wall.GT},
+	{Kind: wall.GTEQ},
 	{Kind: wall.EQ},
 }
 

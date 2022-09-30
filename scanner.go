@@ -27,6 +27,12 @@ const (
 	EQ
 	COMMA
 	COLON
+	EQEQ
+	BANGEQ
+	LT
+	LTEQ
+	GT
+	GTEQ
 
 	// keywords
 	VAR
@@ -77,6 +83,18 @@ func (t TokenKind) String() string {
 		return ","
 	case COLON:
 		return ":"
+	case EQEQ:
+		return "=="
+	case BANGEQ:
+		return "!="
+	case LT:
+		return "<"
+	case LTEQ:
+		return "<="
+	case GT:
+		return ">"
+	case GTEQ:
+		return ">="
 	case VAR:
 		return "VAR"
 	case FUN:
@@ -188,7 +206,36 @@ func (s *Scanner) Scan() (Token, error) {
 		t = s.token(RIGHTBRACE)
 	case '=':
 		s.advance()
-		t = s.token(EQ)
+		if s.next() == '=' {
+			s.advance()
+			t = s.token(EQEQ)
+		} else {
+			t = s.token(EQ)
+		}
+	case '!':
+		s.advance()
+		if s.next() == '=' {
+			s.advance()
+			t = s.token(BANGEQ)
+		} else {
+			return s.token(EOF), NewError(s.pos, "unexpected character: %c", c)
+		}
+	case '<':
+		s.advance()
+		if s.next() == '=' {
+			s.advance()
+			t = s.token(LTEQ)
+		} else {
+			t = s.token(LT)
+		}
+	case '>':
+		s.advance()
+		if s.next() == '=' {
+			s.advance()
+			t = s.token(GTEQ)
+		} else {
+			t = s.token(GT)
+		}
 	case ',':
 		s.advance()
 		t = s.token(COMMA)

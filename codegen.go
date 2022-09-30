@@ -139,6 +139,18 @@ func codegenBinaryExpr(expr *CheckedBinaryExpr, s *Scope) string {
 			return fmt.Sprintf("%s*%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
 		case CHECKED_DIVIDE:
 			return fmt.Sprintf("%s/%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+		case CHECKED_EQUALS:
+			return fmt.Sprintf("%s==%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+		case CHECKED_NOTEQUALS:
+			return fmt.Sprintf("%s!=%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+		case CHECKED_LESSTHAN:
+			return fmt.Sprintf("%s<%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+		case CHECKED_LESSOREQUAL:
+			return fmt.Sprintf("%s<=%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+		case CHECKED_GREATERTHAN:
+			return fmt.Sprintf("%s>%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+		case CHECKED_GREATEROREQUAL:
+			return fmt.Sprintf("%s>=%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
 		}
 	}
 	panic("unreachable")
