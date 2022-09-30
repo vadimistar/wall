@@ -351,6 +351,20 @@ func codegenFuncDeclarations(c *CheckedFile, checkedFiles map[*CheckedFile]struc
 		}
 		builder.WriteString(");\n")
 	}
+	builder.WriteString("/* extern functions */\n")
+	for _, def := range c.ExternFuns {
+		fmt.Fprintf(&builder, "%s %s(", CodegenType(def.ReturnType, c.GlobalScope), string(def.Name.Content))
+		if len(def.Params) == 0 {
+			builder.WriteString(CodegenType(UNIT_TYPE_ID, c.GlobalScope))
+		}
+		for i, param := range def.Params {
+			fmt.Fprintf(&builder, "%s", CodegenType(param.Type, c.GlobalScope))
+			if i < len(def.Params)-1 {
+				builder.WriteString(", ")
+			}
+		}
+		builder.WriteString(");\n")
+	}
 	for _, imp := range c.Imports {
 		builder.WriteString(codegenFuncDeclarations(imp.File, checkedFiles))
 	}

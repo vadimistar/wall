@@ -128,6 +128,34 @@ func (p *Parser) ParseStmtOrDefAndEof() (ParsedNode, error) {
 
 func (p *Parser) ParseDef() (ParsedDef, error) {
 	switch p.next().Kind {
+	case EXTERN:
+		extern := p.advance()
+		if p.next().Kind == FUN {
+			fun := p.advance()
+			name, err := p.match(IDENTIFIER)
+			if err != nil {
+				return nil, err
+			}
+			params, err := p.parseFunParams()
+			if err != nil {
+				return nil, err
+			}
+			var returnType ParsedType = nil
+			if p.next().Kind != NEWLINE {
+				returnType, err = p.parseType()
+				if err != nil {
+					return nil, err
+				}
+			}
+			return &ParsedExternFunDef{
+				Extern:     extern,
+				Fun:        fun,
+				Name:       name,
+				Params:     params,
+				ReturnType: returnType,
+			}, err
+		}
+		return nil, NewError(p.next().Pos, "expected FUN, but got %s", p.next().Kind)
 	case FUN:
 		fun := p.advance()
 		id, err := p.match(IDENTIFIER)

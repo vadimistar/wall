@@ -417,6 +417,59 @@ func TestParseFunDef(t *testing.T) {
 	}
 }
 
+type parseExternFunDefTest struct {
+	tokens   []wall.Token
+	expected *wall.ParsedExternFunDef
+}
+
+var parseExternFunDefTests = []parseExternFunDefTest{
+	{[]wall.Token{
+		{Kind: wall.EXTERN},
+		{Kind: wall.FUN},
+		{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		{Kind: wall.LEFTPAREN},
+		{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.COMMA},
+		{Kind: wall.IDENTIFIER, Content: []byte("b")},
+		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.RIGHTPAREN},
+		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.EOF},
+	}, &wall.ParsedExternFunDef{
+		Extern: wall.Token{Kind: wall.EXTERN},
+		Fun:    wall.Token{Kind: wall.FUN},
+		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		Params: []wall.ParsedFunParam{
+			{
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Type: &wall.ParsedIdType{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+				},
+			},
+			{
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+				Type: &wall.ParsedIdType{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+				},
+			},
+		},
+		ReturnType: &wall.ParsedIdType{
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		},
+	}},
+}
+
+func TestParseExternFunDef(t *testing.T) {
+	for _, test := range parseExternFunDefTests {
+		pr := wall.NewParser(test.tokens)
+		got, err := pr.ParseDefAndEof()
+		if assert.NoError(t, err) {
+			assert.Equal(t, got, test.expected)
+		}
+	}
+}
+
 func TestParseImportDef(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{
 		{Kind: wall.IMPORT},

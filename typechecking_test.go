@@ -60,6 +60,15 @@ func TestCheckFunctionSignatures(t *testing.T) {
 				}},
 				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: []byte("B")}},
 			},
+			&wall.ParsedExternFunDef{
+				Extern: wall.Token{},
+				Fun:    wall.Token{},
+				Name:   wall.Token{Content: []byte("b")},
+				Params: []wall.ParsedFunParam{{
+					Type: &wall.ParsedIdType{Token: wall.Token{Content: []byte("A")}},
+				}},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: []byte("B")}},
+			},
 		},
 	}
 	checkedFile := wall.NewCheckedFile("")
@@ -69,6 +78,14 @@ func TestCheckFunctionSignatures(t *testing.T) {
 	typeIdB := checkedFile.GlobalScope.Types["B"].TypeId
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	if fun, ok := checkedFile.GlobalScope.Funs["a"]; assert.Equal(t, ok, true) {
+		assert.Equal(t, checkedFile.Types[fun.TypeId], &wall.FunctionType{
+			Params: []wall.TypeId{
+				typeIdA,
+			},
+			Returns: typeIdB,
+		})
+	}
+	if fun, ok := checkedFile.GlobalScope.Funs["b"]; assert.Equal(t, ok, true) {
 		assert.Equal(t, checkedFile.Types[fun.TypeId], &wall.FunctionType{
 			Params: []wall.TypeId{
 				typeIdA,

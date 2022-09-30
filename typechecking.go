@@ -150,6 +150,40 @@ func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Pa
 				return err
 			}
 			c.Funs = append(c.Funs, checkedFunDef)
+		case *ParsedExternFunDef:
+			checkedParams := make([]CheckedFunParam, 0, len(def.Params))
+			paramTypes := make([]TypeId, 0, len(def.Params))
+			for i, param := range def.Params {
+				paramType, err := checkType(param.Type, c.GlobalScope)
+				if err != nil {
+					return err
+				}
+				paramTypes = append(paramTypes, paramType)
+				checkedParams = append(checkedParams, CheckedFunParam{
+					Name: &def.Params[i].Id,
+					Type: paramType,
+				})
+			}
+			returnType := UNIT_TYPE_ID
+			if def.ReturnType != nil {
+				var err error
+				returnType, err = checkType(def.ReturnType, c.GlobalScope)
+				if err != nil {
+					return err
+				}
+			}
+			checkedFunDef := &CheckedExternFunDef{
+				Name:       &def.Name,
+				Params:     checkedParams,
+				ReturnType: returnType,
+			}
+			if err := c.GlobalScope.DefineFunction(&def.Name, &FunctionType{
+				Params:  paramTypes,
+				Returns: returnType,
+			}); err != nil {
+				return err
+			}
+			c.ExternFuns = append(c.ExternFuns, checkedFunDef)
 		}
 	}
 	return nil
@@ -829,6 +863,7 @@ type CheckedFile struct {
 	Filename    string
 	Imports     []*CheckedImport
 	Funs        []*CheckedFunDef
+	ExternFuns  []*CheckedExternFunDef
 	Structs     []*CheckedStructDef
 	Types       []Type
 	GlobalScope *Scope
@@ -893,6 +928,12 @@ type CheckedStructDef struct {
 type CheckedStructField struct {
 	Name Token
 	Type TypeId
+}
+
+type CheckedExternFunDef struct {
+	Name       *Token
+	Params     []CheckedFunParam
+	ReturnType TypeId
 }
 
 type CheckedStmt interface {
