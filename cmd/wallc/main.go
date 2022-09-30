@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,11 +9,9 @@ import (
 )
 
 func main() {
-	args := os.Args
-	if len(args) > 2 {
-		panic(fmt.Sprintf("unparsed args: %s", args[2]))
-	}
-	source := args[1]
+	cHeaders := flag.Bool("c", true, "include c standard library headers")
+	flag.Parse()
+	source := flag.Arg(0)
 	if filepath.Ext(source) != ".wl" {
 		panic("a source file with an extension .wl is expected")
 	}
@@ -24,6 +23,10 @@ func main() {
 	check(err)
 	wall.LowerExternFunctions(checkedFile)
 	cSource := wall.CodegenCompilationUnit(checkedFile)
+	if *cHeaders {
+		fmt.Println("#include <stdlib.h>")
+		fmt.Println("#include <stdio.h>")
+	}
 	fmt.Println(cSource)
 }
 
