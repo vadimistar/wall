@@ -166,7 +166,6 @@ func TestEvalVarStmt(t *testing.T) {
 	varStmt := &wall.ParsedVar{
 		Var: wall.Token{},
 		Id:  wall.Token{Content: []byte("a")},
-		Eq:  wall.Token{},
 		Value: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
 		},
@@ -187,7 +186,6 @@ func TestEvalAssignExpr(t *testing.T) {
 	varStmt := &wall.ParsedVar{
 		Var: wall.Token{},
 		Id:  wall.Token{Content: []byte("a")},
-		Eq:  wall.Token{},
 		Value: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 		},

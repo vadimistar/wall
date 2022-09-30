@@ -98,7 +98,7 @@ type ParsedStmt interface {
 type ParsedVar struct {
 	Var   Token
 	Id    Token
-	Eq    Token
+	Type  ParsedType
 	Value ParsedExpr
 }
 

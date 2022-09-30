@@ -11,10 +11,10 @@ func CodegenCompilationUnit(c *CheckedFile) string {
 	WallPrefixesToGlobalNames(c)
 	var result strings.Builder
 	fmt.Fprintf(&result, "/* source filename: %s */\n", c.Filename)
-	result.WriteString("/* function typedefs */\n")
-	result.WriteString(CodegenFuncTypedefs(c))
 	result.WriteString("/* type declarations */\n")
 	result.WriteString(CodegenTypeDeclarations(c))
+	result.WriteString("/* function typedefs */\n")
+	result.WriteString(CodegenFuncTypedefs(c))
 	result.WriteString("/* function declarations */\n")
 	result.WriteString(CodegenFuncDeclarations(c))
 	result.WriteString("/* type definitions */\n")
@@ -196,6 +196,10 @@ func CodegenStmt(stmt CheckedStmt, s *Scope) string {
 }
 
 func codegenVarStmt(stmt *CheckedVar, s *Scope) string {
+	if stmt.Value == nil {
+		t := CodegenType(stmt.Type, s)
+		return fmt.Sprintf("%s %s = (%s) {0};", t, string(stmt.Name.Content), t)
+	}
 	val := CodegenExpr(stmt.Value, s)
 	t := CodegenType(stmt.Type, s)
 	return fmt.Sprintf("%s %s = %s;", t, string(stmt.Name.Content), val)

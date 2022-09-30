@@ -432,6 +432,17 @@ func TestCheckVarStmt(t *testing.T) {
 								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
 							},
 						},
+						&wall.ParsedVar{
+							Id: wall.Token{Content: []byte("b")},
+							Type: &wall.ParsedIdType{
+								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+							},
+						},
+						&wall.ParsedReturn{
+							Arg: &wall.ParsedIdExpr{
+								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+							},
+						},
 					},
 				},
 				ReturnType: &wall.ParsedIdType{

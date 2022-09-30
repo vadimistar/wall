@@ -233,19 +233,31 @@ func (p *Parser) ParseStmt() (ParsedStmt, error) {
 		if err != nil {
 			return nil, err
 		}
-		eq, err := p.match(EQ)
-		if err != nil {
-			return nil, err
+		if p.next().Kind == EQ {
+			_, err = p.match(EQ)
+			if err != nil {
+				return nil, err
+			}
+			val, err := p.ParseExpr()
+			if err != nil {
+				return nil, err
+			}
+			return &ParsedVar{
+				Var:   varToken,
+				Id:    id,
+				Type:  nil,
+				Value: val,
+			}, nil
 		}
-		val, err := p.ParseExpr()
+		t, err := p.parseType()
 		if err != nil {
 			return nil, err
 		}
 		return &ParsedVar{
 			Var:   varToken,
 			Id:    id,
-			Eq:    eq,
-			Value: val,
+			Type:  t,
+			Value: nil,
 		}, nil
 	case RETURN:
 		kw := p.advance()

@@ -392,16 +392,28 @@ func checkExprStmt(p *ParsedExprStmt, s *Scope, controlFlow ControlFlow) (*Check
 }
 
 func checkVar(p *ParsedVar, s *Scope, controlFlow ControlFlow) (*CheckedVar, error) {
-	val, err := CheckExpr(p.Value, s)
-	if err != nil {
-		return nil, err
+	var val CheckedExpr
+	var typ TypeId
+	if p.Value != nil {
+		var err error
+		val, err = CheckExpr(p.Value, s)
+		if err != nil {
+			return nil, err
+		}
+		typ = val.TypeId()
+	} else {
+		var err error
+		typ, err = checkType(p.Type, s)
+		if err != nil {
+			return nil, err
+		}
 	}
 	checked := &CheckedVar{
 		Name:  &p.Id,
-		Type:  val.TypeId(),
+		Type:  typ,
 		Value: val,
 	}
-	if err := s.DefineVar(checked.Name, val.TypeId()); err != nil {
+	if err := s.DefineVar(checked.Name, typ); err != nil {
 		return nil, err
 	}
 	return checked, nil

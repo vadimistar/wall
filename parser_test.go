@@ -265,11 +265,19 @@ func TestParseStructInitExpr(t *testing.T) {
 	}
 }
 
-func TestParseVarStmt(t *testing.T) {
+func TestParseVarStmtWithValue(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{{Kind: wall.VAR}, {Kind: wall.IDENTIFIER}, {Kind: wall.EQ}, {Kind: wall.INTEGER}})
 	stmt, err := pr.ParseStmtAndEof()
 	assert.NoError(t, err)
 	assert.Equal(t, reflect.TypeOf(stmt), reflect.TypeOf(&wall.ParsedVar{}))
+}
+
+func TestParseVarStmtWithType(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{{Kind: wall.VAR}, {Kind: wall.IDENTIFIER}, {Kind: wall.IDENTIFIER}})
+	stmt, err := pr.ParseStmtAndEof()
+	if assert.NoError(t, err) {
+		assert.Equal(t, reflect.TypeOf(stmt), reflect.TypeOf(&wall.ParsedVar{}))
+	}
 }
 
 func TestParseReturnStmt(t *testing.T) {
