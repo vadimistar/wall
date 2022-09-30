@@ -44,7 +44,7 @@ func TestCheckTypeSignatures(t *testing.T) {
 	}
 	checkedFile := wall.NewCheckedFile("")
 	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
-	typ := checkedFile.Types[checkedFile.GlobalScope.Types["a"]]
+	typ := checkedFile.Types[checkedFile.GlobalScope.Types["a"].TypeId]
 	assert.Equal(t, typ, wall.NewStructType())
 	assert.Equal(t, len(checkedFile.Structs), 1)
 }
@@ -63,10 +63,10 @@ func TestCheckFunctionSignatures(t *testing.T) {
 		},
 	}
 	checkedFile := wall.NewCheckedFile("")
-	assert.NoError(t, checkedFile.GlobalScope.DefineType("A", wall.Pos{}, wall.NewStructType()))
-	typeIdA := checkedFile.GlobalScope.Types["A"]
-	assert.NoError(t, checkedFile.GlobalScope.DefineType("B", wall.Pos{}, wall.NewStructType()))
-	typeIdB := checkedFile.GlobalScope.Types["B"]
+	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: []byte("A")}, wall.NewStructType()))
+	typeIdA := checkedFile.GlobalScope.Types["A"].TypeId
+	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: []byte("B")}, wall.NewStructType()))
+	typeIdB := checkedFile.GlobalScope.Types["B"].TypeId
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	if fun, ok := checkedFile.GlobalScope.Funs["a"]; assert.Equal(t, ok, true) {
 		assert.Equal(t, checkedFile.Types[fun.TypeId], &wall.FunctionType{
@@ -102,11 +102,11 @@ func TestCheckTypesContents(t *testing.T) {
 		},
 	}
 	checkedFile := wall.NewCheckedFile("")
-	assert.NoError(t, checkedFile.GlobalScope.DefineType("String", wall.Pos{}, wall.NewStructType()))
-	stringTypeId := checkedFile.GlobalScope.Types["String"]
+	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: []byte("String")}, wall.NewStructType()))
+	stringTypeId := checkedFile.GlobalScope.Types["String"].TypeId
 	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
-	employeeTypeId := checkedFile.GlobalScope.Types["Employee"]
+	employeeTypeId := checkedFile.GlobalScope.Types["Employee"].TypeId
 	if assert.IsType(t, wall.NewStructType(), checkedFile.Types[employeeTypeId]) {
 		emp := checkedFile.Types[employeeTypeId].(*wall.StructType)
 		assert.Equal(t, map[string]wall.TypeId{
@@ -515,4 +515,59 @@ func TestCheckIdExpr(t *testing.T) {
 			}),
 		},
 	}, checkedFile.Funs[1].Body.Stmts[0])
+}
+
+func TestCheckStructInitExpr(t *testing.T) {
+	file := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedStructDef{
+				Name: wall.Token{Content: []byte("Point")},
+				Fields: []wall.ParsedStructField{
+					{
+						Name: wall.Token{Content: []byte("x")},
+						Type: &wall.ParsedIdType{
+							Token: wall.Token{Content: []byte("int")},
+						},
+					},
+					{
+						Name: wall.Token{Content: []byte("y")},
+						Type: &wall.ParsedIdType{
+							Token: wall.Token{Content: []byte("float")},
+						},
+					},
+				},
+			},
+			&wall.ParsedFunDef{
+				Id: wall.Token{Content: []byte("a")},
+				Body: &wall.ParsedBlock{
+					Stmts: []wall.ParsedStmt{
+						&wall.ParsedExprStmt{
+							Expr: &wall.ParsedStructInitExpr{
+								Name: wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("Point")}},
+								Fields: []wall.ParsedStructInitField{
+									{
+										Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("x")},
+										Value: &wall.ParsedLiteralExpr{
+											Token: wall.Token{Kind: wall.INTEGER},
+										},
+									},
+									{
+										Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("y")},
+										Value: &wall.ParsedLiteralExpr{
+											Token: wall.Token{Kind: wall.FLOAT},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	checkedFile := wall.NewCheckedFile("")
+	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
+	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
+	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
+	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 }

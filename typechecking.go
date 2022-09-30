@@ -74,13 +74,14 @@ func checkTypeSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Parsed
 				return err
 			}
 		case *ParsedStructDef:
-			if err := c.GlobalScope.DefineType(string(def.id()), def.pos(), NewStructType()); err != nil {
-				return err
-			}
-			c.Structs = append(c.Structs, &CheckedStructDef{
+			chechedStructDef := &CheckedStructDef{
 				Name:   def.Name,
 				Fields: make([]CheckedStructField, 0, len(def.Fields)),
-			})
+			}
+			if err := c.GlobalScope.DefineType(&chechedStructDef.Name, NewStructType()); err != nil {
+				return err
+			}
+			c.Structs = append(c.Structs, chechedStructDef)
 		}
 	}
 	return nil
@@ -197,7 +198,7 @@ func checkStructContents(def *ParsedStructDef, c *CheckedStructDef, s *Scope) er
 			Type: checkedType,
 		})
 	}
-	structType := s.File.Types[s.findTypeByName(string(def.Name.Content))].(*StructType)
+	structType := s.File.Types[s.findType(string(def.Name.Content)).TypeId].(*StructType)
 	structType.Fields = fields
 	return nil
 }
@@ -368,8 +369,57 @@ func CheckExpr(p ParsedExpr, s *Scope) (CheckedExpr, error) {
 		return checkIdExpr(p, s)
 	case *ParsedCallExpr:
 		return checkCallExpr(p, s)
+	case *ParsedStructInitExpr:
+		return checkStructInitExpr(p, s)
 	}
 	panic("unreachable")
+}
+
+func checkStructInitExpr(p *ParsedStructInitExpr, s *Scope) (*CheckedStructInitExpr, error) {
+	checkedFields := make([]CheckedStructInitField, 0, len(p.Fields))
+	notInitialized := make(map[string]struct{}, len(p.Fields))
+	structName := s.findType(string(p.Name.Content))
+	if structName == nil {
+		return nil, NewError(p.pos(), "struct is not declared: %s", p.Name.Content)
+	}
+	structType, ok := s.File.Types[structName.TypeId].(*StructType)
+	if !ok {
+		return nil, NewError(p.pos(), "name is not a struct: %s", p.Name.Content)
+	}
+	for name := range structType.Fields {
+		notInitialized[name] = struct{}{}
+	}
+	for _, field := range p.Fields {
+		if t, ok := structType.Fields[string(field.Name.Content)]; ok {
+			val, err := CheckExpr(field.Value, s)
+			if err != nil {
+				return nil, err
+			}
+			if t != val.TypeId() {
+				return nil, NewError(field.Name.Pos, "expected %s, but got %s", s.TypeToString(t), s.TypeToString(val.TypeId()))
+			}
+			delete(notInitialized, string(field.Name.Content))
+			checkedFields = append(checkedFields, CheckedStructInitField{
+				Name:  field.Name,
+				Value: val,
+			})
+		} else {
+			return nil, NewError(field.Name.Pos, "unknown field: %s", field.Name.Content)
+		}
+	}
+	if len(notInitialized) > 0 {
+		keys := make([]string, 0, len(notInitialized))
+		for k := range notInitialized {
+			keys = append(keys, k)
+		}
+		return nil, NewError(p.pos(), "uninitialized fields: %s", keys)
+	}
+	return &CheckedStructInitExpr{
+		Id:     structName.Token,
+		Fields: checkedFields,
+		Pos:    p.pos(),
+		Type:   structName.TypeId,
+	}, nil
 }
 
 func checkIdExpr(p *ParsedIdExpr, s *Scope) (*CheckedIdExpr, error) {
@@ -575,11 +625,11 @@ func checkType(t ParsedType, s *Scope) (TypeId, error) {
 		case "char":
 			return CHAR_TYPE_ID, nil
 		default:
-			typeId := s.findTypeByName(string(t.Content))
-			if typeId == NOT_FOUND {
+			typ := s.findType(string(t.Content))
+			if typ == nil {
 				return NOT_FOUND, NewError(t.pos(), "undeclared: %s", t.Content)
 			}
-			return typeId, nil
+			return typ.TypeId, nil
 		}
 	case *ParsedPointerType:
 		to, err := checkType(t.To, s)
@@ -598,11 +648,16 @@ type Name struct {
 	TypeId
 }
 
+type TypeName struct {
+	Token *Token
+	TypeId
+}
+
 type Scope struct {
 	Parent   *Scope
 	Children []*Scope
 	File     *CheckedFile
-	Types    map[string]TypeId
+	Types    map[string]*TypeName
 	Funs     map[string]*Name
 	Vars     map[string]*Name
 	Imports  map[string]ImportId
@@ -612,7 +667,7 @@ func NewScope(parent *Scope) *Scope {
 	s := &Scope{
 		Parent:   parent,
 		Children: make([]*Scope, 0),
-		Types:    make(map[string]TypeId),
+		Types:    make(map[string]*TypeName),
 		Funs:     make(map[string]*Name),
 		Vars:     make(map[string]*Name),
 		Imports:  make(map[string]ImportId),
@@ -633,12 +688,15 @@ func (s *Scope) Import(checkedImport *CheckedImport) error {
 	return nil
 }
 
-func (s *Scope) DefineType(name string, pos Pos, typ Type) error {
-	if s.findTypeByName(name) != NOT_FOUND {
-		return NewError(pos, "type %s is already defined", name)
+func (s *Scope) DefineType(token *Token, typ Type) error {
+	if s.findType(string(token.Content)) != nil {
+		return NewError(token.Pos, "type %s is already defined", token.Content)
 	}
 	s.File.Types = append(s.File.Types, typ)
-	s.Types[name] = TypeId(len(s.File.Types) - 1)
+	s.Types[string(token.Content)] = &TypeName{
+		Token:  token,
+		TypeId: TypeId(len(s.File.Types) - 1),
+	}
 	return nil
 }
 
@@ -705,21 +763,21 @@ func (s *Scope) findImport(name string) ImportId {
 	return IMPORT_NOT_FOUND
 }
 
-func (s *Scope) findTypeByName(name string) TypeId {
+func (s *Scope) findType(name string) *TypeName {
 	if t, ok := s.Types[name]; ok {
 		return t
 	}
 	if s.Parent != nil {
-		return s.Parent.findTypeByName(name)
+		return s.Parent.findType(name)
 	}
-	return NOT_FOUND
+	return nil
 }
 
 func (s *Scope) TypeToString(typeId TypeId) string {
 	switch t := s.File.Types[typeId].(type) {
 	case *BuildinType, *IdType, *StructType:
 		for name, t := range s.Types {
-			if t == typeId {
+			if t.TypeId == typeId {
 				return name
 			}
 		}
@@ -786,10 +844,10 @@ func NewCheckedFile(filename string) *CheckedFile {
 		GlobalScope: NewScope(nil),
 	}
 	c.GlobalScope.File = c
-	c.GlobalScope.DefineType("()", Pos{}, &BuildinType{})
-	c.GlobalScope.DefineType("int", Pos{}, &BuildinType{})
-	c.GlobalScope.DefineType("float", Pos{}, &BuildinType{})
-	c.GlobalScope.DefineType("char", Pos{}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: []byte("()")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: []byte("int")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: []byte("float")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: []byte("string")}, &BuildinType{})
 	constChar := c.TypeId(&PointerType{
 		Type: CHAR_TYPE_ID,
 	})
@@ -915,6 +973,7 @@ type CheckedLiteralExpr struct {
 type CheckedIdExpr struct {
 	Id   *Token
 	Type TypeId
+	// TODO ADD POS
 }
 
 type CheckedCallExpr struct {
@@ -923,12 +982,25 @@ type CheckedCallExpr struct {
 	Type   TypeId
 }
 
-func (c *CheckedUnaryExpr) checkedExpr()   {}
-func (c *CheckedBinaryExpr) checkedExpr()  {}
-func (c *CheckedGroupedExpr) checkedExpr() {}
-func (c *CheckedLiteralExpr) checkedExpr() {}
-func (c *CheckedIdExpr) checkedExpr()      {}
-func (c *CheckedCallExpr) checkedExpr()    {}
+type CheckedStructInitExpr struct {
+	Id     *Token
+	Fields []CheckedStructInitField
+	Pos
+	Type TypeId
+}
+
+type CheckedStructInitField struct {
+	Name  Token
+	Value CheckedExpr
+}
+
+func (c *CheckedUnaryExpr) checkedExpr()      {}
+func (c *CheckedBinaryExpr) checkedExpr()     {}
+func (c *CheckedGroupedExpr) checkedExpr()    {}
+func (c *CheckedLiteralExpr) checkedExpr()    {}
+func (c *CheckedIdExpr) checkedExpr()         {}
+func (c *CheckedCallExpr) checkedExpr()       {}
+func (c *CheckedStructInitExpr) checkedExpr() {}
 
 func (c *CheckedUnaryExpr) TypeId() TypeId {
 	return c.Operand.TypeId()
@@ -946,6 +1018,9 @@ func (c *CheckedIdExpr) TypeId() TypeId {
 	return c.Type
 }
 func (c *CheckedCallExpr) TypeId() TypeId {
+	return c.Type
+}
+func (c *CheckedStructInitExpr) TypeId() TypeId {
 	return c.Type
 }
 

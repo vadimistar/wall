@@ -26,6 +26,7 @@ const (
 	RIGHTBRACE
 	EQ
 	COMMA
+	COLON
 
 	// keywords
 	VAR
@@ -69,6 +70,8 @@ func (t TokenKind) String() string {
 		return "="
 	case COMMA:
 		return ","
+	case COLON:
+		return ":"
 	case VAR:
 		return "VAR"
 	case FUN:
@@ -174,6 +177,9 @@ func (s *Scanner) Scan() (Token, error) {
 	case ',':
 		s.advance()
 		t = s.token(COMMA)
+	case ':':
+		s.advance()
+		t = s.token(COLON)
 	case '"':
 		s.advance()
 		return s.string()

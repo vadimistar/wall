@@ -93,8 +93,24 @@ func CodegenExpr(expr CheckedExpr, s *Scope) string {
 		return codegenIdExpr(expr, s)
 	case *CheckedCallExpr:
 		return codegenCallExpr(expr, s)
+	case *CheckedStructInitExpr:
+		return codegenStructInitExpr(expr, s)
 	}
 	panic("unreachable")
+}
+
+func codegenStructInitExpr(expr *CheckedStructInitExpr, s *Scope) string {
+	var builder strings.Builder
+	fmt.Fprintf(&builder, "(%s) {\n", string(expr.Id.Content))
+	for i, field := range expr.Fields {
+		fmt.Fprintf(&builder, ".%s = %s", field.Name.Content, CodegenExpr(field.Value, s))
+		if i+1 < len(expr.Fields) {
+			builder.WriteString(",")
+		}
+		builder.WriteString("\n")
+	}
+	builder.WriteString("}")
+	return builder.String()
 }
 
 func codegenIdExpr(expr *CheckedIdExpr, s *Scope) string {

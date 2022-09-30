@@ -155,6 +155,16 @@ type ParsedCallExpr struct {
 	Args   []ParsedExpr
 }
 
+type ParsedStructInitExpr struct {
+	Name   ParsedIdType
+	Fields []ParsedStructInitField
+}
+
+type ParsedStructInitField struct {
+	Name  Token
+	Value ParsedExpr
+}
+
 func (u ParsedUnaryExpr) pos() Pos {
 	return u.Operator.Pos
 }
@@ -173,13 +183,17 @@ func (i ParsedIdExpr) pos() Pos {
 func (c ParsedCallExpr) pos() Pos {
 	return c.Callee.pos()
 }
+func (s ParsedStructInitExpr) pos() Pos {
+	return s.Name.Pos
+}
 
-func (u ParsedUnaryExpr) expr()   {}
-func (b ParsedBinaryExpr) expr()  {}
-func (g ParsedGroupedExpr) expr() {}
-func (l ParsedLiteralExpr) expr() {}
-func (i ParsedIdExpr) expr()      {}
-func (c ParsedCallExpr) expr()    {}
+func (u ParsedUnaryExpr) expr()      {}
+func (b ParsedBinaryExpr) expr()     {}
+func (g ParsedGroupedExpr) expr()    {}
+func (l ParsedLiteralExpr) expr()    {}
+func (i ParsedIdExpr) expr()         {}
+func (c ParsedCallExpr) expr()       {}
+func (s ParsedStructInitExpr) expr() {}
 
 type ParsedType interface {
 	ParsedNode

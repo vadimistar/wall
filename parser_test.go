@@ -198,6 +198,73 @@ func TestParseCallExpr(t *testing.T) {
 	}
 }
 
+type parseStructInitExprTest struct {
+	tokens   []wall.Token
+	expected *wall.ParsedStructInitExpr
+}
+
+var parseStructInitExprTests = []parseStructInitExprTest{
+	{
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("Bob")}, {Kind: wall.LEFTBRACE}, {Kind: wall.RIGHTBRACE}},
+		expected: &wall.ParsedStructInitExpr{
+			Name:   wall.ParsedIdType{},
+			Fields: []wall.ParsedStructInitField{},
+		},
+	},
+	{
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("Bob")}, {Kind: wall.LEFTBRACE}, {Kind: wall.IDENTIFIER, Content: []byte("age")}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTBRACE}},
+		expected: &wall.ParsedStructInitExpr{
+			Name: wall.ParsedIdType{},
+			Fields: []wall.ParsedStructInitField{
+				{
+					Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("age")},
+					Value: &wall.ParsedLiteralExpr{
+						Token: wall.Token{Kind: wall.INTEGER},
+					},
+				},
+			},
+		},
+	},
+	{
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("Bob")}, {Kind: wall.LEFTBRACE}, {Kind: wall.IDENTIFIER, Content: []byte("age")}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTBRACE}},
+		expected: &wall.ParsedStructInitExpr{
+			Name: wall.ParsedIdType{},
+			Fields: []wall.ParsedStructInitField{
+				{
+					Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("age")},
+					Value: &wall.ParsedLiteralExpr{
+						Token: wall.Token{Kind: wall.INTEGER},
+					},
+				},
+			},
+		},
+	},
+	{
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("Bob")}, {Kind: wall.LEFTBRACE}, {Kind: wall.NEWLINE}, {Kind: wall.IDENTIFIER, Content: []byte("age")}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.COMMA}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE}},
+		expected: &wall.ParsedStructInitExpr{
+			Name: wall.ParsedIdType{},
+			Fields: []wall.ParsedStructInitField{
+				{
+					Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("age")},
+					Value: &wall.ParsedLiteralExpr{
+						Token: wall.Token{Kind: wall.INTEGER},
+					},
+				},
+			},
+		},
+	},
+}
+
+func TestParseStructInitExpr(t *testing.T) {
+	for _, test := range parseStructInitExprTests {
+		pr := wall.NewParser(test.tokens)
+		expr, err := pr.ParseExprAndEof()
+		if assert.NoError(t, err) {
+			assert.IsType(t, test.expected, expr)
+		}
+	}
+}
+
 func TestParseVarStmt(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{{Kind: wall.VAR}, {Kind: wall.IDENTIFIER}, {Kind: wall.EQ}, {Kind: wall.INTEGER}})
 	stmt, err := pr.ParseStmtAndEof()

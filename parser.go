@@ -381,6 +381,48 @@ func (p *Parser) parsePrimary() (ParsedExpr, error) {
 		return &ParsedLiteralExpr{Token: t}, nil
 	case IDENTIFIER:
 		t := p.advance()
+		if (p.next().Kind == LEFTBRACE && p.peek(1).Kind == RIGHTBRACE) ||
+			(p.next().Kind == LEFTBRACE && p.peek(1).Kind == IDENTIFIER && p.peek(2).Kind == COLON) ||
+			(p.next().Kind == LEFTBRACE && p.peek(1).Kind == NEWLINE && p.peek(2).Kind == IDENTIFIER && p.peek(3).Kind == COLON) {
+			fields := make([]ParsedStructInitField, 0)
+			p.advance()
+			for p.next().Kind != RIGHTBRACE {
+				if p.next().Kind == NEWLINE {
+					p.advance()
+					continue
+				}
+				name, err := p.match(IDENTIFIER)
+				if err != nil {
+					return nil, err
+				}
+				_, err = p.match(COLON)
+				if err != nil {
+					return nil, err
+				}
+				value, err := p.ParseExpr()
+				if err != nil {
+					return nil, err
+				}
+				fields = append(fields, ParsedStructInitField{
+					Name:  name,
+					Value: value,
+				})
+				if p.next().Kind == RIGHTBRACE {
+					break
+				}
+				_, err = p.match(COMMA)
+				if err != nil {
+					return nil, err
+				}
+			}
+			p.advance()
+			return &ParsedStructInitExpr{
+				Name: ParsedIdType{
+					Token: t,
+				},
+				Fields: fields,
+			}, nil
+		}
 		return &ParsedIdExpr{Token: t}, nil
 	case LEFTPAREN:
 		left := p.advance()
@@ -412,10 +454,14 @@ func (p *Parser) parsePrimary() (ParsedExpr, error) {
 }
 
 func (p *Parser) next() Token {
-	if p.index >= len(p.tokens) {
+	return p.peek(0)
+}
+
+func (p *Parser) peek(offset int) Token {
+	if p.index+offset >= len(p.tokens) {
 		return p.tokens[len(p.tokens)-1]
 	}
-	return p.tokens[p.index]
+	return p.tokens[p.index+offset]
 }
 
 func (p *Parser) advance() Token {
