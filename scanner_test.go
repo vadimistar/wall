@@ -38,6 +38,10 @@ var scanTokensTests = []scanTokensTest{
 	{[]byte("struct"), []wall.TokenKind{wall.STRUCT, wall.EOF}},
 	{[]byte("return"), []wall.TokenKind{wall.RETURN, wall.EOF}},
 	{[]byte("extern"), []wall.TokenKind{wall.EXTERN, wall.EOF}},
+	{[]byte("true"), []wall.TokenKind{wall.TRUE, wall.EOF}},
+	{[]byte("false"), []wall.TokenKind{wall.FALSE, wall.EOF}},
+	{[]byte("if"), []wall.TokenKind{wall.IF, wall.EOF}},
+	{[]byte("else"), []wall.TokenKind{wall.ELSE, wall.EOF}},
 }
 
 func TestScanTokens(t *testing.T) {

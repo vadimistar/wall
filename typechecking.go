@@ -584,6 +584,11 @@ func checkLiteralExpr(p *ParsedLiteralExpr, s *Scope) (*CheckedLiteralExpr, erro
 			Literal: p.Token,
 			Type:    s.File.TypeId(&PointerType{Type: CHAR_TYPE_ID}),
 		}, nil
+	case TRUE, FALSE:
+		return &CheckedLiteralExpr{
+			Literal: p.Token,
+			Type:    BOOL_TYPE_ID,
+		}, nil
 	}
 	panic("unreachable")
 }
@@ -721,6 +726,8 @@ func checkType(t ParsedType, s *Scope) (TypeId, error) {
 			return FLOAT_TYPE_ID, nil
 		case "char":
 			return CHAR_TYPE_ID, nil
+		case "bool":
+			return BOOL_TYPE_ID, nil
 		default:
 			typ := s.findType(string(t.Content))
 			if typ == nil {

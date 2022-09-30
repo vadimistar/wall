@@ -154,6 +154,12 @@ func codegenLiteralExpr(expr *CheckedLiteralExpr, s *Scope) string {
 		s = strings.ReplaceAll(s, "\n", "\n\"")
 		return fmt.Sprintf("\"%s\"", s)
 	}
+	if expr.Literal.Kind == TRUE {
+		return "1"
+	}
+	if expr.Literal.Kind == FALSE {
+		return "0"
+	}
 	return string(expr.Literal.Content)
 }
 
@@ -410,7 +416,7 @@ func CodegenType(id TypeId, s *Scope) string {
 		switch id {
 		case UNIT_TYPE_ID:
 			return "void"
-		case INT_TYPE_ID:
+		case INT_TYPE_ID, BOOL_TYPE_ID:
 			return "int"
 		case FLOAT_TYPE_ID:
 			return "float"

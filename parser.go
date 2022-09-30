@@ -444,7 +444,7 @@ func precedence(t TokenKind) int {
 
 func (p *Parser) parsePrimary() (ParsedExpr, error) {
 	switch t := p.next(); t.Kind {
-	case INTEGER, FLOAT, STRING:
+	case INTEGER, FLOAT, STRING, TRUE, FALSE:
 		t := p.advance()
 		return &ParsedLiteralExpr{Token: t}, nil
 	case IDENTIFIER:

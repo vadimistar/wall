@@ -35,6 +35,10 @@ const (
 	STRUCT
 	RETURN
 	EXTERN
+	TRUE
+	FALSE
+	IF
+	ELSE
 )
 
 func (t TokenKind) String() string {
@@ -85,6 +89,14 @@ func (t TokenKind) String() string {
 		return "RETURN"
 	case EXTERN:
 		return "EXTERN"
+	case TRUE:
+		return "TRUE"
+	case FALSE:
+		return "FALSE"
+	case IF:
+		return "IF"
+	case ELSE:
+		return "ELSE"
 	}
 	panic("unreachable")
 }
@@ -232,6 +244,18 @@ func (s *Scanner) id() Token {
 	}
 	if bytes.Equal(t.Content, []byte("extern")) {
 		t.Kind = EXTERN
+	}
+	if bytes.Equal(t.Content, []byte("true")) {
+		t.Kind = TRUE
+	}
+	if bytes.Equal(t.Content, []byte("false")) {
+		t.Kind = FALSE
+	}
+	if bytes.Equal(t.Content, []byte("if")) {
+		t.Kind = IF
+	}
+	if bytes.Equal(t.Content, []byte("else")) {
+		t.Kind = ELSE
 	}
 	return t
 }

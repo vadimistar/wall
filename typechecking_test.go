@@ -180,6 +180,34 @@ var checkBlocksTests = []checkBlocksTest{
 	{
 		block: &wall.ParsedBlock{
 			Stmts: []wall.ParsedStmt{
+				&wall.ParsedReturn{
+					Arg: &wall.ParsedLiteralExpr{
+						Token: wall.Token{Kind: wall.TRUE},
+					},
+				},
+			},
+		},
+		returnType: &wall.ParsedIdType{
+			Token: wall.Token{Content: []byte("bool")},
+		},
+	},
+	{
+		block: &wall.ParsedBlock{
+			Stmts: []wall.ParsedStmt{
+				&wall.ParsedReturn{
+					Arg: &wall.ParsedLiteralExpr{
+						Token: wall.Token{Kind: wall.FALSE},
+					},
+				},
+			},
+		},
+		returnType: &wall.ParsedIdType{
+			Token: wall.Token{Content: []byte("bool")},
+		},
+	},
+	{
+		block: &wall.ParsedBlock{
+			Stmts: []wall.ParsedStmt{
 				&wall.ParsedBlock{},
 				&wall.ParsedReturn{
 					Arg: &wall.ParsedLiteralExpr{
