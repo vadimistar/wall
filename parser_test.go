@@ -315,6 +315,68 @@ func TestParseBlockStmt(t *testing.T) {
 	assert.Equal(t, got, expected)
 }
 
+type parseIfStmtTest struct {
+	tokens   []wall.Token
+	expected *wall.ParsedIf
+}
+
+var parseIfStmtTests = []parseIfStmtTest{
+	{
+		tokens: []wall.Token{
+			{Kind: wall.IF}, {Kind: wall.IDENTIFIER}, {Kind: wall.LEFTBRACE}, {Kind: wall.IDENTIFIER}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE},
+		},
+		expected: &wall.ParsedIf{
+			If: wall.Token{Kind: wall.IF},
+			Condition: &wall.ParsedIdExpr{
+				Token: wall.Token{Kind: wall.IDENTIFIER},
+			},
+			Body: &wall.ParsedBlock{
+				Left:  wall.Token{Kind: wall.LEFTBRACE},
+				Stmts: []wall.ParsedStmt{&wall.ParsedExprStmt{Expr: &wall.ParsedIdExpr{Token: wall.Token{Kind: wall.IDENTIFIER}}}},
+				Right: wall.Token{Kind: wall.RIGHTBRACE},
+			},
+			ElseBody: nil,
+		},
+	},
+	{
+		tokens: []wall.Token{
+			{Kind: wall.IF}, {Kind: wall.IDENTIFIER}, {Kind: wall.LEFTBRACE}, {Kind: wall.NEWLINE}, {Kind: wall.IDENTIFIER}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE}, {Kind: wall.ELSE}, {Kind: wall.LEFTBRACE}, {Kind: wall.IDENTIFIER}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE},
+		},
+		expected: &wall.ParsedIf{
+			If: wall.Token{Kind: wall.IF},
+			Condition: &wall.ParsedIdExpr{
+				Token: wall.Token{Kind: wall.IDENTIFIER},
+			},
+			Body: &wall.ParsedBlock{
+				Left:  wall.Token{Kind: wall.LEFTBRACE},
+				Stmts: []wall.ParsedStmt{&wall.ParsedExprStmt{Expr: &wall.ParsedIdExpr{Token: wall.Token{Kind: wall.IDENTIFIER}}}},
+				Right: wall.Token{Kind: wall.RIGHTBRACE},
+			},
+			ElseBody: &wall.ParsedBlock{
+				Left: wall.Token{Kind: wall.LEFTBRACE},
+				Stmts: []wall.ParsedStmt{
+					&wall.ParsedExprStmt{
+						Expr: &wall.ParsedIdExpr{
+							Token: wall.Token{Kind: wall.IDENTIFIER},
+						},
+					},
+				},
+				Right: wall.Token{Kind: wall.RIGHTBRACE},
+			},
+		},
+	},
+}
+
+func TestParseIfStmt(t *testing.T) {
+	for _, test := range parseIfStmtTests {
+		pr := wall.NewParser(test.tokens)
+		stmt, err := pr.ParseStmtAndEof()
+		if assert.NoError(t, err) {
+			assert.Equal(t, test.expected, stmt)
+		}
+	}
+}
+
 type parseFunDefTest struct {
 	tokens   []wall.Token
 	expected wall.ParsedDef

@@ -191,6 +191,8 @@ func CodegenStmt(stmt CheckedStmt, s *Scope) string {
 		return codegenBlock(stmt, s)
 	case *CheckedReturn:
 		return codegenReturn(stmt, s)
+	case *CheckedIf:
+		return codegenIf(stmt, s)
 	}
 	panic("unimplemented")
 }
@@ -226,6 +228,14 @@ func codegenReturn(r *CheckedReturn, s *Scope) string {
 	}
 	arg := CodegenExpr(r.Value, s)
 	return fmt.Sprintf("return %s;", arg)
+}
+
+func codegenIf(i *CheckedIf, s *Scope) string {
+	if i.ElseBody != nil {
+		return fmt.Sprintf("if (%s) %s else %s", CodegenExpr(i.Cond, s), codegenBlock(i.Body, s), codegenBlock(i.ElseBody, s))
+	} else {
+		return fmt.Sprintf("if (%s) %s", CodegenExpr(i.Cond, s), codegenBlock(i.Body, s))
+	}
 }
 
 func codegenFuncDefinitions(c *CheckedFile, checkedFiles map[*CheckedFile]struct{}) string {

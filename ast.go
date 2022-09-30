@@ -117,6 +117,13 @@ type ParsedReturn struct {
 	Arg    ParsedExpr
 }
 
+type ParsedIf struct {
+	If        Token
+	Condition ParsedExpr
+	Body      *ParsedBlock
+	ElseBody  *ParsedBlock
+}
+
 func (v *ParsedVar) pos() Pos {
 	return v.Id.Pos
 }
@@ -129,11 +136,15 @@ func (b *ParsedBlock) pos() Pos {
 func (r *ParsedReturn) pos() Pos {
 	return r.Return.Pos
 }
+func (i *ParsedIf) pos() Pos {
+	return i.If.Pos
+}
 
 func (v *ParsedVar) stmt()      {}
 func (e *ParsedExprStmt) stmt() {}
 func (b *ParsedBlock) stmt()    {}
 func (r *ParsedReturn) stmt()   {}
+func (i *ParsedIf) stmt()       {}
 
 type ParsedExpr interface {
 	ParsedNode

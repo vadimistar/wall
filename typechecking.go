@@ -339,7 +339,7 @@ func checkBlock(p *ParsedBlock, s *Scope, controlFlow ControlFlow) (*CheckedBloc
 
 func CheckStmt(stmt ParsedStmt, scope *Scope, controlFlow ControlFlow) (CheckedStmt, error) {
 	switch stmt := stmt.(type) {
-	case *ParsedReturn, *ParsedBlock:
+	case *ParsedReturn, *ParsedBlock, *ParsedIf:
 		{
 		}
 	default:
@@ -356,8 +356,41 @@ func CheckStmt(stmt ParsedStmt, scope *Scope, controlFlow ControlFlow) (CheckedS
 		return checkBlock(stmt, scope, controlFlow)
 	case *ParsedReturn:
 		return checkReturn(stmt, scope, controlFlow)
+	case *ParsedIf:
+		return checkIf(stmt, scope, controlFlow)
 	}
 	panic("unimplemented")
+}
+
+func checkIf(p *ParsedIf, s *Scope, controlFlow ControlFlow) (*CheckedIf, error) {
+	if _, mustReturn := controlFlow.(*MustReturn); mustReturn {
+		if p.ElseBody == nil {
+			return nil, NewError(p.pos(), "if statement without else block may not return (add else block with return statement)")
+		}
+	}
+	cond, err := CheckExpr(p.Condition, s)
+	if err != nil {
+		return nil, err
+	}
+	if cond.TypeId() != BOOL_TYPE_ID {
+		return nil, NewError(p.Condition.pos(), "a condition must be a boolean expression, but it's %s", s.TypeToString(cond.TypeId()))
+	}
+	body, err := checkBlock(p.Body, s, controlFlow)
+	if err != nil {
+		return nil, err
+	}
+	var elseBody *CheckedBlock
+	if p.ElseBody != nil {
+		elseBody, err = checkBlock(p.ElseBody, s, controlFlow)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &CheckedIf{
+		Cond:     cond,
+		Body:     body,
+		ElseBody: elseBody,
+	}, nil
 }
 
 func checkReturn(p *ParsedReturn, s *Scope, controlFlow ControlFlow) (*CheckedReturn, error) {
@@ -913,6 +946,7 @@ func NewCheckedFile(filename string) *CheckedFile {
 	c.GlobalScope.DefineType(&Token{Content: []byte("int")}, &BuildinType{})
 	c.GlobalScope.DefineType(&Token{Content: []byte("float")}, &BuildinType{})
 	c.GlobalScope.DefineType(&Token{Content: []byte("char")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: []byte("bool")}, &BuildinType{})
 	constChar := c.TypeId(&PointerType{
 		Type: CHAR_TYPE_ID,
 	})
@@ -988,10 +1022,17 @@ type CheckedReturn struct {
 	Value CheckedExpr
 }
 
+type CheckedIf struct {
+	Cond     CheckedExpr
+	Body     *CheckedBlock
+	ElseBody *CheckedBlock
+}
+
 func (c *CheckedVar) checkedStmt()      {}
 func (c *CheckedExprStmt) checkedStmt() {}
 func (c *CheckedBlock) checkedStmt()    {}
 func (c *CheckedReturn) checkedStmt()   {}
+func (c *CheckedIf) checkedStmt()       {}
 
 type CheckedExpr interface {
 	checkedExpr()
@@ -1105,6 +1146,7 @@ const (
 	INT_TYPE_ID
 	FLOAT_TYPE_ID
 	CHAR_TYPE_ID
+	BOOL_TYPE_ID
 )
 
 type Type interface {

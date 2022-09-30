@@ -277,6 +277,34 @@ func (p *Parser) ParseStmt() (ParsedStmt, error) {
 		}, nil
 	case LEFTBRACE:
 		return p.parseBlock()
+	case IF:
+		kw := p.advance()
+		cond, err := p.ParseExpr()
+		if err != nil {
+			return nil, err
+		}
+		body, err := p.parseBlock()
+		if err != nil {
+			return nil, err
+		}
+		if p.next().Kind == ELSE {
+			p.advance()
+			elseBody, err := p.parseBlock()
+			if err != nil {
+				return nil, err
+			}
+			return &ParsedIf{
+				If:        kw,
+				Condition: cond,
+				Body:      body,
+				ElseBody:  elseBody,
+			}, nil
+		}
+		return &ParsedIf{
+			If:        kw,
+			Condition: cond,
+			Body:      body,
+		}, nil
 	}
 	expr, err := p.ParseExpr()
 	if err != nil {
