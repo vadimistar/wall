@@ -191,6 +191,12 @@ type ParsedStructInitField struct {
 	Value ParsedExpr
 }
 
+type ParsedAccessExpr struct {
+	Object ParsedExpr
+	Dot    Token
+	Member Token
+}
+
 func (u ParsedUnaryExpr) pos() Pos {
 	return u.Operator.Pos
 }
@@ -212,6 +218,9 @@ func (c ParsedCallExpr) pos() Pos {
 func (s ParsedStructInitExpr) pos() Pos {
 	return s.Name.Pos
 }
+func (a ParsedAccessExpr) pos() Pos {
+	return a.Object.pos()
+}
 
 func (u ParsedUnaryExpr) expr()      {}
 func (b ParsedBinaryExpr) expr()     {}
@@ -220,6 +229,7 @@ func (l ParsedLiteralExpr) expr()    {}
 func (i ParsedIdExpr) expr()         {}
 func (c ParsedCallExpr) expr()       {}
 func (s ParsedStructInitExpr) expr() {}
+func (a ParsedAccessExpr) expr()     {}
 
 type ParsedType interface {
 	ParsedNode

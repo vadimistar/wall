@@ -358,30 +358,6 @@ func (p *Parser) ParseExpr() (ParsedExpr, error) {
 	if err != nil {
 		return nil, err
 	}
-	if p.next().Kind == LEFTPAREN {
-		p.advance()
-		args := make([]ParsedExpr, 0)
-		for p.next().Kind != RIGHTPAREN {
-			arg, err := p.ParseExpr()
-			if err != nil {
-				return nil, err
-			}
-			args = append(args, arg)
-			if p.next().Kind == RIGHTPAREN {
-				break
-			}
-			if _, err := p.match(COMMA); err != nil {
-				return nil, err
-			}
-		}
-		if _, err := p.match(RIGHTPAREN); err != nil {
-			return nil, err
-		}
-		return &ParsedCallExpr{
-			Callee: lhs,
-			Args:   args,
-		}, nil
-	}
 	return p.parseExpr(lhs, 0)
 }
 
@@ -446,11 +422,11 @@ func precedence(t TokenKind) int {
 	return -1
 }
 
-func (p *Parser) parsePrimary() (ParsedExpr, error) {
+func (p *Parser) parsePrimary() (expr ParsedExpr, err error) {
 	switch t := p.next(); t.Kind {
 	case INTEGER, FLOAT, STRING, TRUE, FALSE:
 		t := p.advance()
-		return &ParsedLiteralExpr{Token: t}, nil
+		expr = &ParsedLiteralExpr{Token: t}
 	case IDENTIFIER:
 		t := p.advance()
 		if (p.next().Kind == LEFTBRACE && p.peek(1).Kind == RIGHTBRACE) ||
@@ -488,14 +464,15 @@ func (p *Parser) parsePrimary() (ParsedExpr, error) {
 				}
 			}
 			p.advance()
-			return &ParsedStructInitExpr{
+			expr = &ParsedStructInitExpr{
 				Name: ParsedIdType{
 					Token: t,
 				},
 				Fields: fields,
-			}, nil
+			}
+		} else {
+			expr = &ParsedIdExpr{Token: t}
 		}
-		return &ParsedIdExpr{Token: t}, nil
 	case LEFTPAREN:
 		left := p.advance()
 		inner, err := p.ParseExpr()
@@ -506,23 +483,64 @@ func (p *Parser) parsePrimary() (ParsedExpr, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &ParsedGroupedExpr{
+		expr = &ParsedGroupedExpr{
 			Left:  left,
 			Inner: inner,
 			Right: right,
-		}, nil
+		}
 	case PLUS, MINUS:
 		operator := p.advance()
 		operand, err := p.parsePrimary()
 		if err != nil {
 			return nil, err
 		}
-		return &ParsedUnaryExpr{
+		expr = &ParsedUnaryExpr{
 			Operator: operator,
 			Operand:  operand,
-		}, nil
+		}
+	default:
+		return nil, NewError(p.next().Pos, "expected primary expression, but got %s", p.next().Kind)
 	}
-	return nil, NewError(p.next().Pos, "expected primary expression, but got %s", p.next().Kind)
+	for {
+		if p.next().Kind == LEFTPAREN {
+			p.advance()
+			args := make([]ParsedExpr, 0)
+			for p.next().Kind != RIGHTPAREN {
+				arg, err := p.ParseExpr()
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, arg)
+				if p.next().Kind == RIGHTPAREN {
+					break
+				}
+				if _, err := p.match(COMMA); err != nil {
+					return nil, err
+				}
+			}
+			if _, err := p.match(RIGHTPAREN); err != nil {
+				return nil, err
+			}
+			expr = &ParsedCallExpr{
+				Callee: expr,
+				Args:   args,
+			}
+		} else if p.next().Kind == DOT {
+			dot := p.advance()
+			member, err := p.match(IDENTIFIER)
+			if err != nil {
+				return nil, err
+			}
+			expr = &ParsedAccessExpr{
+				Object: expr,
+				Dot:    dot,
+				Member: member,
+			}
+		} else {
+			break
+		}
+	}
+	return expr, nil
 }
 
 func (p *Parser) next() Token {

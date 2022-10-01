@@ -96,8 +96,14 @@ func CodegenExpr(expr CheckedExpr, s *Scope) string {
 		return codegenCallExpr(expr, s)
 	case *CheckedStructInitExpr:
 		return codegenStructInitExpr(expr, s)
+	case *CheckedMemberAccessExpr:
+		return codegenMemberAccessExpr(expr, s)
 	}
 	panic("unreachable")
+}
+
+func codegenMemberAccessExpr(expr *CheckedMemberAccessExpr, s *Scope) string {
+	return fmt.Sprintf("%s.%s", CodegenExpr(expr.Object, s), expr.Member.Content)
 }
 
 func codegenStructInitExpr(expr *CheckedStructInitExpr, s *Scope) string {

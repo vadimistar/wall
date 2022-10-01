@@ -469,8 +469,30 @@ func CheckExpr(p ParsedExpr, s *Scope) (CheckedExpr, error) {
 		return checkCallExpr(p, s)
 	case *ParsedStructInitExpr:
 		return checkStructInitExpr(p, s)
+	case *ParsedAccessExpr:
+		return checkAccessExpr(p, s)
 	}
 	panic("unreachable")
+}
+
+func checkAccessExpr(p *ParsedAccessExpr, s *Scope) (*CheckedMemberAccessExpr, error) {
+	object, err := CheckExpr(p.Object, s)
+	if err != nil {
+		return nil, err
+	}
+	structType, isStructType := s.File.Types[object.TypeId()].(*StructType)
+	if !isStructType {
+		return nil, NewError(p.pos(), "can't use . operator: expected struct type, but got %s", s.TypeToString(object.TypeId()))
+	}
+	fieldType, fieldExists := structType.Fields[string(p.Member.Content)]
+	if !fieldExists {
+		return nil, NewError(p.Member.Pos, "unknown field: %s", p.Member.Content)
+	}
+	return &CheckedMemberAccessExpr{
+		Object: object,
+		Member: p.Member,
+		Type:   fieldType,
+	}, nil
 }
 
 func checkStructInitExpr(p *ParsedStructInitExpr, s *Scope) (*CheckedStructInitExpr, error) {
@@ -1155,13 +1177,20 @@ type CheckedStructInitField struct {
 	Value CheckedExpr
 }
 
-func (c *CheckedUnaryExpr) checkedExpr()      {}
-func (c *CheckedBinaryExpr) checkedExpr()     {}
-func (c *CheckedGroupedExpr) checkedExpr()    {}
-func (c *CheckedLiteralExpr) checkedExpr()    {}
-func (c *CheckedIdExpr) checkedExpr()         {}
-func (c *CheckedCallExpr) checkedExpr()       {}
-func (c *CheckedStructInitExpr) checkedExpr() {}
+type CheckedMemberAccessExpr struct {
+	Object CheckedExpr
+	Member Token
+	Type   TypeId
+}
+
+func (c *CheckedUnaryExpr) checkedExpr()        {}
+func (c *CheckedBinaryExpr) checkedExpr()       {}
+func (c *CheckedGroupedExpr) checkedExpr()      {}
+func (c *CheckedLiteralExpr) checkedExpr()      {}
+func (c *CheckedIdExpr) checkedExpr()           {}
+func (c *CheckedCallExpr) checkedExpr()         {}
+func (c *CheckedStructInitExpr) checkedExpr()   {}
+func (c *CheckedMemberAccessExpr) checkedExpr() {}
 
 func (c *CheckedUnaryExpr) TypeId() TypeId {
 	return c.Operand.TypeId()
@@ -1182,6 +1211,9 @@ func (c *CheckedCallExpr) TypeId() TypeId {
 	return c.Type
 }
 func (c *CheckedStructInitExpr) TypeId() TypeId {
+	return c.Type
+}
+func (c *CheckedMemberAccessExpr) TypeId() TypeId {
 	return c.Type
 }
 

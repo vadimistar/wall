@@ -771,3 +771,62 @@ func TestCheckStructInitExpr(t *testing.T) {
 	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
 	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 }
+
+func TestCheckAccessExpr(t *testing.T) {
+	file := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedStructDef{
+				Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("Point")},
+				Fields: []wall.ParsedStructField{
+					{
+						Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("x")},
+						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")}},
+					},
+					{
+						Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("y")},
+						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")}},
+					},
+				},
+			},
+			&wall.ParsedFunDef{
+				Id:         wall.Token{Kind: wall.IDENTIFIER, Content: []byte("main")},
+				Params:     []wall.ParsedFunParam{},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")}},
+				Body: &wall.ParsedBlock{
+					Left: wall.Token{Kind: wall.LEFTBRACE},
+					Stmts: []wall.ParsedStmt{
+						&wall.ParsedVar{
+							Id:    wall.Token{Kind: wall.IDENTIFIER, Content: []byte("p")},
+							Type:  &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("Point")}},
+							Value: nil,
+						},
+						&wall.ParsedExprStmt{
+							Expr: &wall.ParsedAccessExpr{
+								Object: &wall.ParsedIdExpr{
+									Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("p")},
+								},
+								Dot:    wall.Token{Kind: wall.DOT},
+								Member: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("x")},
+							},
+						},
+						&wall.ParsedReturn{
+							Arg: &wall.ParsedAccessExpr{
+								Object: &wall.ParsedIdExpr{
+									Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("p")},
+								},
+								Dot:    wall.Token{Kind: wall.DOT},
+								Member: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("y")},
+							},
+						},
+					},
+					Right: wall.Token{Kind: wall.RIGHTBRACE},
+				},
+			},
+		},
+	}
+	checkedFile := wall.NewCheckedFile("")
+	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
+	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
+	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
+	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
+}

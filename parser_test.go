@@ -644,3 +644,17 @@ func TestParseCompilationUnit(t *testing.T) {
 	importA := C.Defs[0].(*wall.ParsedImport)
 	assert.Equal(t, importA.File, A)
 }
+
+func TestParseAccessExpr(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("a")}, {Kind: wall.DOT}, {Kind: wall.IDENTIFIER, Content: []byte("b")}})
+	got, err := pr.ParseExprAndEof()
+	if assert.NoError(t, err) {
+		assert.Equal(t, &wall.ParsedAccessExpr{
+			Object: &wall.ParsedIdExpr{
+				Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+			},
+			Dot:    wall.Token{Kind: wall.DOT},
+			Member: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+		}, got)
+	}
+}
