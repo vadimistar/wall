@@ -849,6 +849,17 @@ func checkType(t ParsedType, s *Scope) (TypeId, error) {
 		return s.File.TypeId(&PointerType{
 			Type: to,
 		}), nil
+	case *ParsedModuleAccessType:
+		importId := s.findImport(string(t.Module.Content))
+		if importId == IMPORT_NOT_FOUND {
+			return NOT_FOUND, NewError(t.Module.Pos, "unresolved import: %s", t.Module.Content)
+		}
+		importScope := s.File.Imports[importId].File.GlobalScope
+		member, err := checkType(t.Member, importScope)
+		if err != nil {
+			return NOT_FOUND, err
+		}
+		return member, nil
 	}
 	panic("unreachable")
 }

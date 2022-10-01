@@ -255,12 +255,22 @@ type ParsedPointerType struct {
 	To   ParsedType
 }
 
+type ParsedModuleAccessType struct {
+	Module     Token
+	Coloncolon Token
+	Member     ParsedType
+}
+
 func (i *ParsedIdType) pos() Pos {
 	return i.Token.Pos
 }
 func (p *ParsedPointerType) pos() Pos {
 	return p.Star.Pos
 }
+func (p *ParsedModuleAccessType) pos() Pos {
+	return p.Module.Pos
+}
 
-func (i *ParsedIdType) parsedType()      {}
-func (p *ParsedPointerType) parsedType() {}
+func (i *ParsedIdType) parsedType()           {}
+func (p *ParsedPointerType) parsedType()      {}
+func (p *ParsedModuleAccessType) parsedType() {}

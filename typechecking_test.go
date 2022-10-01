@@ -932,3 +932,40 @@ func TestCheckModuleAccessExpr(t *testing.T) {
 	assert.NoError(t, wall.CheckFunctionSignatures(fileA, checkedFileA))
 	assert.NoError(t, wall.CheckBlocks(fileA, checkedFileA))
 }
+
+func TestCheckModuleAccessType(t *testing.T) {
+	fileA := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedImport{
+				Name: wall.Token{Content: []byte("B")},
+				File: nil,
+			},
+			&wall.ParsedFunDef{
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Body: &wall.ParsedBlock{
+					Stmts: []wall.ParsedStmt{
+						&wall.ParsedVar{
+							Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("v")},
+							Type: &wall.ParsedIdType{
+								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("A")},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	fileB := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedStructDef{
+				Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("A")},
+				Fields: []wall.ParsedStructField{},
+			},
+		},
+	}
+	fileA.Defs[0].(*wall.ParsedImport).File = fileB
+	checkedFileA := wall.NewCheckedFile("")
+	assert.NoError(t, wall.CheckImports(fileA, checkedFileA))
+	assert.NoError(t, wall.CheckTypeContents(fileA, checkedFileA))
+	assert.NoError(t, wall.CheckBlocks(fileA, checkedFileA))
+}
