@@ -429,6 +429,18 @@ func (p *Parser) parsePrimary() (expr ParsedExpr, err error) {
 		expr = &ParsedLiteralExpr{Token: t}
 	case IDENTIFIER:
 		t := p.advance()
+		if p.next().Kind == COLONCOLON {
+			coloncolon := p.advance()
+			member, err := p.parsePrimary()
+			if err != nil {
+				return nil, err
+			}
+			return &ParsedModuleAccessExpr{
+				Module:     t,
+				Coloncolon: coloncolon,
+				Member:     member,
+			}, nil
+		}
 		if (p.next().Kind == LEFTBRACE && p.peek(1).Kind == RIGHTBRACE) ||
 			(p.next().Kind == LEFTBRACE && p.peek(1).Kind == IDENTIFIER && p.peek(2).Kind == COLON) ||
 			(p.next().Kind == LEFTBRACE && p.peek(1).Kind == NEWLINE && p.peek(2).Kind == IDENTIFIER && p.peek(3).Kind == COLON) {
@@ -531,7 +543,7 @@ func (p *Parser) parsePrimary() (expr ParsedExpr, err error) {
 			if err != nil {
 				return nil, err
 			}
-			expr = &ParsedAccessExpr{
+			expr = &ParsedObjectAccessExpr{
 				Object: expr,
 				Dot:    dot,
 				Member: member,

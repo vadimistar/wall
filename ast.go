@@ -191,10 +191,16 @@ type ParsedStructInitField struct {
 	Value ParsedExpr
 }
 
-type ParsedAccessExpr struct {
+type ParsedObjectAccessExpr struct {
 	Object ParsedExpr
 	Dot    Token
 	Member Token
+}
+
+type ParsedModuleAccessExpr struct {
+	Module     Token
+	Coloncolon Token
+	Member     ParsedExpr
 }
 
 func (u ParsedUnaryExpr) pos() Pos {
@@ -218,18 +224,22 @@ func (c ParsedCallExpr) pos() Pos {
 func (s ParsedStructInitExpr) pos() Pos {
 	return s.Name.Pos
 }
-func (a ParsedAccessExpr) pos() Pos {
-	return a.Object.pos()
+func (p ParsedObjectAccessExpr) pos() Pos {
+	return p.Object.pos()
+}
+func (p ParsedModuleAccessExpr) pos() Pos {
+	return p.Module.Pos
 }
 
-func (u ParsedUnaryExpr) expr()      {}
-func (b ParsedBinaryExpr) expr()     {}
-func (g ParsedGroupedExpr) expr()    {}
-func (l ParsedLiteralExpr) expr()    {}
-func (i ParsedIdExpr) expr()         {}
-func (c ParsedCallExpr) expr()       {}
-func (s ParsedStructInitExpr) expr() {}
-func (a ParsedAccessExpr) expr()     {}
+func (u ParsedUnaryExpr) expr()        {}
+func (b ParsedBinaryExpr) expr()       {}
+func (g ParsedGroupedExpr) expr()      {}
+func (l ParsedLiteralExpr) expr()      {}
+func (i ParsedIdExpr) expr()           {}
+func (c ParsedCallExpr) expr()         {}
+func (s ParsedStructInitExpr) expr()   {}
+func (a ParsedObjectAccessExpr) expr() {}
+func (p ParsedModuleAccessExpr) expr() {}
 
 type ParsedType interface {
 	ParsedNode

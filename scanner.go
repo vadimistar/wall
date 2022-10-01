@@ -27,6 +27,7 @@ const (
 	EQ
 	COMMA
 	COLON
+	COLONCOLON
 	DOT
 	EQEQ
 	BANGEQ
@@ -85,6 +86,8 @@ func (t TokenKind) String() string {
 		return ","
 	case COLON:
 		return ":"
+	case COLONCOLON:
+		return "::"
 	case DOT:
 		return "."
 	case EQEQ:
@@ -247,7 +250,12 @@ func (s *Scanner) Scan() (Token, error) {
 		t = s.token(COMMA)
 	case ':':
 		s.advance()
-		t = s.token(COLON)
+		if s.next() == ':' {
+			s.advance()
+			t = s.token(COLONCOLON)
+		} else {
+			t = s.token(COLON)
+		}
 	case '.':
 		s.advance()
 		t = s.token(DOT)

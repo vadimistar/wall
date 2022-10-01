@@ -32,6 +32,7 @@ var scanTokensTests = []scanTokensTest{
 	{[]byte("{}"), []wall.TokenKind{wall.LEFTBRACE, wall.RIGHTBRACE, wall.EOF}},
 	{[]byte(","), []wall.TokenKind{wall.COMMA, wall.EOF}},
 	{[]byte(":"), []wall.TokenKind{wall.COLON, wall.EOF}},
+	{[]byte("::"), []wall.TokenKind{wall.COLONCOLON, wall.EOF}},
 	{[]byte("."), []wall.TokenKind{wall.DOT, wall.EOF}},
 	{[]byte("="), []wall.TokenKind{wall.EQ, wall.EOF}},
 	{[]byte("=="), []wall.TokenKind{wall.EQEQ, wall.EOF}},

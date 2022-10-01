@@ -469,13 +469,32 @@ func CheckExpr(p ParsedExpr, s *Scope) (CheckedExpr, error) {
 		return checkCallExpr(p, s)
 	case *ParsedStructInitExpr:
 		return checkStructInitExpr(p, s)
-	case *ParsedAccessExpr:
-		return checkAccessExpr(p, s)
+	case *ParsedObjectAccessExpr:
+		return checkObjectAccessExpr(p, s)
+	case *ParsedModuleAccessExpr:
+		return checkModuleAccessExpr(p, s)
 	}
 	panic("unreachable")
 }
 
-func checkAccessExpr(p *ParsedAccessExpr, s *Scope) (*CheckedMemberAccessExpr, error) {
+func checkModuleAccessExpr(p *ParsedModuleAccessExpr, s *Scope) (CheckedExpr, error) {
+	importId := s.findImport(string(p.Module.Content))
+	if importId == IMPORT_NOT_FOUND {
+		return nil, NewError(p.Module.Pos, "unresolved import: %s", p.Module.Content)
+	}
+	importScope := s.File.Imports[importId].File.GlobalScope
+	member, err := CheckExpr(p.Member, importScope)
+	if err != nil {
+		return nil, err
+	}
+	return &CheckedModuleAccessExpr{
+		Module: p.Module,
+		Member: member,
+		Type:   member.TypeId(),
+	}, nil
+}
+
+func checkObjectAccessExpr(p *ParsedObjectAccessExpr, s *Scope) (CheckedExpr, error) {
 	object, err := CheckExpr(p.Object, s)
 	if err != nil {
 		return nil, err
@@ -875,7 +894,7 @@ func (s *Scope) Import(checkedImport *CheckedImport) error {
 		return NewError(checkedImport.Name.Pos, "%s is already imported", checkedImport.Name.Content)
 	}
 	s.File.Imports = append(s.File.Imports, checkedImport)
-	s.Imports[checkedImport.Name.String()] = ImportId(len(s.File.Imports) - 1)
+	s.Imports[string(checkedImport.Name.Content)] = ImportId(len(s.File.Imports) - 1)
 	return nil
 }
 
@@ -1217,6 +1236,12 @@ type CheckedMemberAccessExpr struct {
 	Type   TypeId
 }
 
+type CheckedModuleAccessExpr struct {
+	Module Token
+	Member CheckedExpr
+	Type   TypeId
+}
+
 func (c *CheckedUnaryExpr) checkedExpr()        {}
 func (c *CheckedBinaryExpr) checkedExpr()       {}
 func (c *CheckedGroupedExpr) checkedExpr()      {}
@@ -1225,6 +1250,7 @@ func (c *CheckedIdExpr) checkedExpr()           {}
 func (c *CheckedCallExpr) checkedExpr()         {}
 func (c *CheckedStructInitExpr) checkedExpr()   {}
 func (c *CheckedMemberAccessExpr) checkedExpr() {}
+func (c *CheckedModuleAccessExpr) checkedExpr() {}
 
 func (c *CheckedUnaryExpr) TypeId() TypeId {
 	return c.Type
@@ -1248,6 +1274,9 @@ func (c *CheckedStructInitExpr) TypeId() TypeId {
 	return c.Type
 }
 func (c *CheckedMemberAccessExpr) TypeId() TypeId {
+	return c.Type
+}
+func (c *CheckedModuleAccessExpr) TypeId() TypeId {
 	return c.Type
 }
 
