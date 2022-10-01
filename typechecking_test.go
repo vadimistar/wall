@@ -830,3 +830,63 @@ func TestCheckAccessExpr(t *testing.T) {
 	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
 	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 }
+
+func TestCheckAddressOp(t *testing.T) {
+	checkedFile := wall.NewCheckedFile("")
+	parsedExpr := &wall.ParsedUnaryExpr{
+		Operator: wall.Token{Kind: wall.AMP},
+		Operand: &wall.ParsedLiteralExpr{
+			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+		},
+	}
+	_, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
+	assert.Error(t, err)
+	parsedExpr = &wall.ParsedUnaryExpr{
+		Operator: wall.Token{Kind: wall.AMP},
+		Operand: &wall.ParsedIdExpr{
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		},
+	}
+	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")}, wall.INT_TYPE_ID)
+	checkedExpr, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
+	if assert.NoError(t, err) {
+		assert.Equal(t, checkedExpr.TypeId(), checkedFile.TypeId(&wall.PointerType{
+			Type: wall.INT_TYPE_ID,
+		}))
+	}
+}
+
+func TestCheckDerefOp(t *testing.T) {
+	checkedFile := wall.NewCheckedFile("")
+	parsedExpr := &wall.ParsedUnaryExpr{
+		Operator: wall.Token{Kind: wall.STAR},
+		Operand: &wall.ParsedIdExpr{
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		},
+	}
+	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")}, checkedFile.TypeId(&wall.PointerType{
+		Type: wall.INT_TYPE_ID,
+	}))
+	checkedExpr, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
+	if assert.NoError(t, err) {
+		assert.Equal(t, checkedExpr.TypeId(), wall.INT_TYPE_ID)
+	}
+}
+
+func TestCheckAssignExpr(t *testing.T) {
+	checkedFile := wall.NewCheckedFile("")
+	parsedExpr := &wall.ParsedBinaryExpr{
+		Left: &wall.ParsedIdExpr{
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		},
+		Op: wall.Token{Kind: wall.EQ},
+		Right: &wall.ParsedLiteralExpr{
+			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+		},
+	}
+	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")}, wall.INT_TYPE_ID)
+	checkedExpr, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
+	if assert.NoError(t, err) {
+		assert.Equal(t, checkedExpr.TypeId(), wall.INT_TYPE_ID)
+	}
+}

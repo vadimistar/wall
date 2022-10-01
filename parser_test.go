@@ -53,6 +53,8 @@ func TestParseLiteralAndIdExpr(t *testing.T) {
 
 var unaryOps = []wall.Token{
 	{Kind: wall.MINUS},
+	{Kind: wall.AMP},
+	{Kind: wall.STAR},
 }
 
 func TestParseUnaryExpr(t *testing.T) {

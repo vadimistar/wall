@@ -637,7 +637,7 @@ func checkBinaryExpr(p *ParsedBinaryExpr, s *Scope) (*CheckedBinaryExpr, error) 
 	if err != nil {
 		return nil, err
 	}
-	operator, returnType, err := checkBinaryOperator(p.Op, left.TypeId(), right.TypeId(), s)
+	operator, returnType, err := checkBinaryOperator(p.Op, left, right.TypeId(), s)
 	if err != nil {
 		return nil, err
 	}
@@ -649,34 +649,39 @@ func checkBinaryExpr(p *ParsedBinaryExpr, s *Scope) (*CheckedBinaryExpr, error) 
 	}, nil
 }
 
-func checkBinaryOperator(operator Token, left, right TypeId, s *Scope) (CheckedBinaryOperator, TypeId, error) {
-	if left != right {
-		return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator %s is not defined for types %s and %s", operator.Kind, s.TypeToString(left), s.TypeToString(right))
+func checkBinaryOperator(operator Token, left CheckedExpr, right TypeId, s *Scope) (CheckedBinaryOperator, TypeId, error) {
+	if left.TypeId() != right {
+		return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator %s is not defined for types %s and %s", operator.Kind, s.TypeToString(left.TypeId()), s.TypeToString(right))
 	}
 	switch operator.Kind {
+	case EQ:
+		if isTemporaryValue(left) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "can't assign to a temporary value: %s", s.TypeToString(left.TypeId()))
+		}
+		return CHECKED_ASSIGN, left.TypeId(), nil
 	case PLUS:
-		if !traitIsImplemented(ADD_TRAIT, left, s) {
-			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator + is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), ADD_TRAIT)
+		if !traitIsImplemented(ADD_TRAIT, left.TypeId(), s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator + is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left.TypeId()), s.TypeToString(right), ADD_TRAIT)
 		}
-		return CHECKED_ADD, left, nil
+		return CHECKED_ADD, left.TypeId(), nil
 	case MINUS:
-		if !traitIsImplemented(SUBTRACT_TRAIT, left, s) {
-			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator - is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), SUBTRACT_TRAIT)
+		if !traitIsImplemented(SUBTRACT_TRAIT, left.TypeId(), s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator - is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left.TypeId()), s.TypeToString(right), SUBTRACT_TRAIT)
 		}
-		return CHECKED_SUBTRACT, left, nil
+		return CHECKED_SUBTRACT, left.TypeId(), nil
 	case STAR:
-		if !traitIsImplemented(MULTIPLY_TRAIT, left, s) {
-			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator * is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), MULTIPLY_TRAIT)
+		if !traitIsImplemented(MULTIPLY_TRAIT, left.TypeId(), s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator * is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left.TypeId()), s.TypeToString(right), MULTIPLY_TRAIT)
 		}
-		return CHECKED_MULTIPLY, left, nil
+		return CHECKED_MULTIPLY, left.TypeId(), nil
 	case SLASH:
-		if !traitIsImplemented(DIVIDE_TRAIT, left, s) {
-			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator / is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left), s.TypeToString(right), DIVIDE_TRAIT)
+		if !traitIsImplemented(DIVIDE_TRAIT, left.TypeId(), s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator / is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left.TypeId()), s.TypeToString(right), DIVIDE_TRAIT)
 		}
-		return CHECKED_DIVIDE, left, nil
+		return CHECKED_DIVIDE, left.TypeId(), nil
 	case EQEQ, BANGEQ:
-		if !traitIsImplemented(EQUALS_TRAIT, left, s) && !traitIsImplemented(ORDERING_TRAIT, left, s) {
-			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator %s is not defined for types %s and %s (try to implement %s trait)", operator.Kind, s.TypeToString(left), s.TypeToString(right), EQUALS_TRAIT)
+		if !traitIsImplemented(EQUALS_TRAIT, left.TypeId(), s) && !traitIsImplemented(ORDERING_TRAIT, left.TypeId(), s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator %s is not defined for types %s and %s (try to implement %s trait)", operator.Kind, s.TypeToString(left.TypeId()), s.TypeToString(right), EQUALS_TRAIT)
 		}
 		if operator.Kind == EQEQ {
 			return CHECKED_EQUALS, BOOL_TYPE_ID, nil
@@ -685,8 +690,8 @@ func checkBinaryOperator(operator Token, left, right TypeId, s *Scope) (CheckedB
 			return CHECKED_NOTEQUALS, BOOL_TYPE_ID, nil
 		}
 	case LT, LTEQ, GT, GTEQ:
-		if !traitIsImplemented(ORDERING_TRAIT, left, s) {
-			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator %s is not defined for types %s and %s (try to implement %s trait)", operator.Kind, s.TypeToString(left), s.TypeToString(right), ORDERING_TRAIT)
+		if !traitIsImplemented(ORDERING_TRAIT, left.TypeId(), s) {
+			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator %s is not defined for types %s and %s (try to implement %s trait)", operator.Kind, s.TypeToString(left.TypeId()), s.TypeToString(right), ORDERING_TRAIT)
 		}
 		if operator.Kind == LT {
 			return CHECKED_LESSTHAN, BOOL_TYPE_ID, nil
@@ -709,7 +714,7 @@ func checkUnaryExpr(p *ParsedUnaryExpr, s *Scope) (*CheckedUnaryExpr, error) {
 	if err != nil {
 		return nil, err
 	}
-	operator, err := checkUnaryOperator(p.Operator, operand.TypeId(), s)
+	operator, resultType, err := checkUnaryOperator(p.Operator, operand, s)
 	if err != nil {
 		return nil, err
 	}
@@ -717,18 +722,43 @@ func checkUnaryExpr(p *ParsedUnaryExpr, s *Scope) (*CheckedUnaryExpr, error) {
 		Pos:      p.pos(),
 		Operator: operator,
 		Operand:  operand,
+		Type:     resultType,
 	}, nil
 }
 
-func checkUnaryOperator(operator Token, operand TypeId, s *Scope) (CheckedUnaryOperator, error) {
+func checkUnaryOperator(operator Token, operand CheckedExpr, s *Scope) (CheckedUnaryOperator, TypeId, error) {
 	switch operator.Kind {
 	case MINUS:
-		if !traitIsImplemented(NEGATE_TRAIT, operand, s) {
-			return INVALID_UNARY_OPERATOR, NewError(operator.Pos, "operator - is not defined for type %s (try to implement %s trait)", s.TypeToString(operand), NEGATE_TRAIT)
+		if !traitIsImplemented(NEGATE_TRAIT, operand.TypeId(), s) {
+			return INVALID_UNARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator - is not defined for type %s (try to implement %s trait)", s.TypeToString(operand.TypeId()), NEGATE_TRAIT)
 		}
-		return CHECKED_NEGATE, nil
+		return CHECKED_NEGATE, operand.TypeId(), nil
+	case AMP:
+		if isTemporaryValue(operand) {
+			return INVALID_UNARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "can't take an address of a temporary value: %s", s.TypeToString(operand.TypeId()))
+		}
+		return CHECKED_ADDRESS, s.File.TypeId(&PointerType{
+			Type: operand.TypeId(),
+		}), nil
+	case STAR:
+		if pointerType, isPointer := s.File.Types[operand.TypeId()].(*PointerType); isPointer {
+			return CHECKED_DEREF, pointerType.Type, nil
+		}
+		return INVALID_UNARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "can't use * operator on %s (a pointer type is expected)", s.TypeToString(operand.TypeId()))
 	}
 	panic("unreachable")
+}
+
+func isTemporaryValue(operand CheckedExpr) bool {
+	switch operand := operand.(type) {
+	case *CheckedUnaryExpr, *CheckedBinaryExpr, *CheckedLiteralExpr, *CheckedCallExpr, *CheckedStructInitExpr:
+		return true
+	case *CheckedGroupedExpr:
+		return isTemporaryValue(operand.Inner)
+	case *CheckedIdExpr, *CheckedMemberAccessExpr:
+		return false
+	}
+	return false
 }
 
 func traitIsImplemented(trait string, typeId TypeId, s *Scope) bool {
@@ -1107,6 +1137,7 @@ type CheckedUnaryExpr struct {
 	Pos
 	Operator CheckedUnaryOperator
 	Operand  CheckedExpr
+	Type     TypeId
 }
 
 type CheckedUnaryOperator int
@@ -1116,6 +1147,8 @@ const INVALID_UNARY_OPERATOR CheckedUnaryOperator = -1
 const (
 	CHECKED_UNARY_PLUS CheckedUnaryOperator = iota
 	CHECKED_NEGATE
+	CHECKED_ADDRESS
+	CHECKED_DEREF
 )
 
 type CheckedBinaryExpr struct {
@@ -1140,6 +1173,7 @@ const (
 	CHECKED_LESSOREQUAL
 	CHECKED_GREATERTHAN
 	CHECKED_GREATEROREQUAL
+	CHECKED_ASSIGN
 )
 
 type CheckedGroupedExpr struct {
@@ -1193,7 +1227,7 @@ func (c *CheckedStructInitExpr) checkedExpr()   {}
 func (c *CheckedMemberAccessExpr) checkedExpr() {}
 
 func (c *CheckedUnaryExpr) TypeId() TypeId {
-	return c.Operand.TypeId()
+	return c.Type
 }
 func (c *CheckedBinaryExpr) TypeId() TypeId {
 	return c.Type

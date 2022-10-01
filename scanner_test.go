@@ -40,6 +40,7 @@ var scanTokensTests = []scanTokensTest{
 	{[]byte("<="), []wall.TokenKind{wall.LTEQ, wall.EOF}},
 	{[]byte(">"), []wall.TokenKind{wall.GT, wall.EOF}},
 	{[]byte(">="), []wall.TokenKind{wall.GTEQ, wall.EOF}},
+	{[]byte("&"), []wall.TokenKind{wall.AMP, wall.EOF}},
 	{[]byte("var"), []wall.TokenKind{wall.VAR, wall.EOF}},
 	{[]byte("fun"), []wall.TokenKind{wall.FUN, wall.EOF}},
 	{[]byte("import"), []wall.TokenKind{wall.IMPORT, wall.EOF}},

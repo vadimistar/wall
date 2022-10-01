@@ -34,6 +34,7 @@ const (
 	LTEQ
 	GT
 	GTEQ
+	AMP
 
 	// keywords
 	VAR
@@ -98,6 +99,8 @@ func (t TokenKind) String() string {
 		return ">"
 	case GTEQ:
 		return ">="
+	case AMP:
+		return "&"
 	case VAR:
 		return "VAR"
 	case FUN:
@@ -251,6 +254,9 @@ func (s *Scanner) Scan() (Token, error) {
 	case '"':
 		s.advance()
 		return s.string()
+	case '&':
+		s.advance()
+		t = s.token(AMP)
 	default:
 		if isId(c) {
 			return s.id(), nil

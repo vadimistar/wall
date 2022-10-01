@@ -488,7 +488,7 @@ func (p *Parser) parsePrimary() (expr ParsedExpr, err error) {
 			Inner: inner,
 			Right: right,
 		}
-	case PLUS, MINUS:
+	case PLUS, MINUS, AMP, STAR:
 		operator := p.advance()
 		operand, err := p.parsePrimary()
 		if err != nil {

@@ -125,39 +125,41 @@ func codegenIdExpr(expr *CheckedIdExpr, s *Scope) string {
 }
 
 func codegenUnaryExpr(expr *CheckedUnaryExpr, s *Scope) string {
-	if isBuildin(expr.Operand.TypeId()) {
-		switch expr.Operator {
-		case CHECKED_NEGATE:
-			return fmt.Sprintf("-%s", CodegenExpr(expr.Operand, s))
-		}
+	switch expr.Operator {
+	case CHECKED_NEGATE:
+		return fmt.Sprintf("-(%s)", CodegenExpr(expr.Operand, s))
+	case CHECKED_ADDRESS:
+		return fmt.Sprintf("&(%s)", CodegenExpr(expr.Operand, s))
+	case CHECKED_DEREF:
+		return fmt.Sprintf("*(%s)", CodegenExpr(expr.Operand, s))
 	}
 	panic("unreachable")
 }
 
 func codegenBinaryExpr(expr *CheckedBinaryExpr, s *Scope) string {
-	if isBuildin(expr.Left.TypeId()) {
-		switch expr.Op {
-		case CHECKED_ADD:
-			return fmt.Sprintf("%s+%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
-		case CHECKED_SUBTRACT:
-			return fmt.Sprintf("%s-%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
-		case CHECKED_MULTIPLY:
-			return fmt.Sprintf("%s*%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
-		case CHECKED_DIVIDE:
-			return fmt.Sprintf("%s/%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
-		case CHECKED_EQUALS:
-			return fmt.Sprintf("%s==%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
-		case CHECKED_NOTEQUALS:
-			return fmt.Sprintf("%s!=%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
-		case CHECKED_LESSTHAN:
-			return fmt.Sprintf("%s<%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
-		case CHECKED_LESSOREQUAL:
-			return fmt.Sprintf("%s<=%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
-		case CHECKED_GREATERTHAN:
-			return fmt.Sprintf("%s>%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
-		case CHECKED_GREATEROREQUAL:
-			return fmt.Sprintf("%s>=%s", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
-		}
+	switch expr.Op {
+	case CHECKED_ADD:
+		return fmt.Sprintf("(%s)+(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+	case CHECKED_SUBTRACT:
+		return fmt.Sprintf("(%s)-(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+	case CHECKED_MULTIPLY:
+		return fmt.Sprintf("(%s)*(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+	case CHECKED_DIVIDE:
+		return fmt.Sprintf("(%s)/(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+	case CHECKED_EQUALS:
+		return fmt.Sprintf("(%s)==(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+	case CHECKED_NOTEQUALS:
+		return fmt.Sprintf("(%s)!=(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+	case CHECKED_LESSTHAN:
+		return fmt.Sprintf("(%s)<(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+	case CHECKED_LESSOREQUAL:
+		return fmt.Sprintf("(%s)<=(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+	case CHECKED_GREATERTHAN:
+		return fmt.Sprintf("(%s)>(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+	case CHECKED_GREATEROREQUAL:
+		return fmt.Sprintf("(%s)>=(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
+	case CHECKED_ASSIGN:
+		return fmt.Sprintf("(%s)=(%s)", CodegenExpr(expr.Left, s), CodegenExpr(expr.Right, s))
 	}
 	panic("unreachable")
 }
