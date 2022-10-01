@@ -44,6 +44,11 @@ func ParseCompilationUnit(filename string, source []byte) (*ParsedFile, error) {
 }
 
 func resolveImports(file *ParsedFile, parsedModules map[string]*ParsedFile) error {
+	absImportedFilename, err := filepath.Abs(file.pos().Filename)
+	if err != nil {
+		return err
+	}
+	parsedModules[absImportedFilename] = file
 	for i, def := range file.Defs {
 		switch importDef := def.(type) {
 		case *ParsedImport:
