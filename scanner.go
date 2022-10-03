@@ -179,6 +179,9 @@ type Scanner struct {
 }
 
 func NewScanner(filename string, source []byte) Scanner {
+	if len(source) == 0 {
+		source = append(source, 0)
+	}
 	const DEFAULT_LINE uint = 1
 	return Scanner{
 		pos: Pos{
