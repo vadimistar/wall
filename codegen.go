@@ -373,6 +373,7 @@ func moduleNameFromFilename(filename string) string {
 	filename = strings.ReplaceAll(filename, "/", "_")
 	filename = strings.ReplaceAll(filename, "\\", "_")
 	filename = strings.ReplaceAll(filename, "..", "SUPER")
+	filename = strings.ReplaceAll(filename, ".", "")
 	filename = strings.ReplaceAll(filename, ":", "")
 	return filename
 }

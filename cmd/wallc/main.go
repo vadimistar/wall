@@ -17,6 +17,7 @@ func main() {
 	}
 	bytes, err := os.ReadFile(source)
 	check(err)
+	source = filepath.Base(source)
 	parsedFile, err := wall.ParseCompilationUnit(source, bytes)
 	check(err)
 	checkedFile, err := wall.CheckCompilationUnit(parsedFile)
