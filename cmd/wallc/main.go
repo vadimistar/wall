@@ -12,8 +12,8 @@ func main() {
 	cHeaders := flag.Bool("c", true, "include c standard library headers")
 	flag.Parse()
 	source := flag.Arg(0)
-	if filepath.Ext(source) != ".wl" {
-		panic("a source file with an extension .wl is expected")
+	if filepath.Ext(source) != ".wall" {
+		panic("a source file with an extension .wall is expected")
 	}
 	bytes, err := os.ReadFile(source)
 	check(err)
