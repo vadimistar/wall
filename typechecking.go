@@ -489,6 +489,9 @@ func checkVar(p *ParsedVar, s *Scope, controlFlow ControlFlow) (*CheckedVar, err
 			return nil, err
 		}
 	}
+	if typ == UNIT_TYPE_ID {
+		return nil, NewError(p.pos(), "can't declare a variable of type %s", s.TypeToString(UNIT_TYPE_ID))
+	}
 	checked := &CheckedVar{
 		Name:  &p.Id,
 		Type:  typ,
