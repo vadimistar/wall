@@ -868,7 +868,7 @@ func isArithmetic(typeId TypeId) bool {
 }
 
 func isScalar(typeId TypeId, s *Scope) bool {
-	if _, isPointee := s.File.Types[typeId].(*FunctionType); isPointee {
+	if _, isPointee := s.File.Types[typeId].(*PointerType); isPointee {
 		return true
 	}
 	return isArithmetic(typeId) || typeId == CHAR_TYPE_ID || typeId == BOOL_TYPE_ID
