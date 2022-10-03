@@ -48,6 +48,7 @@ const (
 	FALSE
 	IF
 	ELSE
+	AS
 )
 
 func (t TokenKind) String() string {
@@ -124,6 +125,8 @@ func (t TokenKind) String() string {
 		return "IF"
 	case ELSE:
 		return "ELSE"
+	case AS:
+		return "AS"
 	}
 	panic("unreachable")
 }
@@ -323,6 +326,9 @@ func (s *Scanner) id() Token {
 	}
 	if bytes.Equal(t.Content, []byte("else")) {
 		t.Kind = ELSE
+	}
+	if bytes.Equal(t.Content, []byte("as")) {
+		t.Kind = AS
 	}
 	return t
 }

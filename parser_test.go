@@ -672,3 +672,19 @@ func TestParseModuleAccessExpr(t *testing.T) {
 		}, got)
 	}
 }
+
+func TestParseAsExpr(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{{Kind: wall.INTEGER}, {Kind: wall.AS}, {Kind: wall.IDENTIFIER}})
+	got, err := pr.ParseExprAndEof()
+	if assert.NoError(t, err) {
+		assert.Equal(t, &wall.ParsedAsExpr{
+			Value: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.INTEGER},
+			},
+			As: wall.Token{Kind: wall.AS},
+			Type: &wall.ParsedIdType{
+				Token: wall.Token{Kind: wall.IDENTIFIER},
+			},
+		}, got)
+	}
+}

@@ -100,8 +100,14 @@ func CodegenExpr(expr CheckedExpr, s *Scope) string {
 		return codegenMemberAccessExpr(expr, s)
 	case *CheckedModuleAccessExpr:
 		return codegenModuleAccessExpr(expr, s)
+	case *CheckedAsExpr:
+		return codegenAsExpr(expr, s)
 	}
 	panic("unreachable")
+}
+
+func codegenAsExpr(expr *CheckedAsExpr, s *Scope) string {
+	return fmt.Sprintf("(%s) (%s)", CodegenType(expr.Type, s), CodegenExpr(expr.Value, s))
 }
 
 func codegenModuleAccessExpr(expr *CheckedModuleAccessExpr, s *Scope) string {
@@ -207,10 +213,6 @@ func codegenCallExpr(expr *CheckedCallExpr, s *Scope) string {
 	}
 	builder.WriteString(")")
 	return builder.String()
-}
-
-func isBuildin(id TypeId) bool {
-	return id == UNIT_TYPE_ID || id == INT_TYPE_ID || id == FLOAT_TYPE_ID
 }
 
 func CodegenStmt(stmt CheckedStmt, s *Scope) string {

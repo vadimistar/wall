@@ -473,11 +473,34 @@ func CheckExpr(p ParsedExpr, s *Scope) (CheckedExpr, error) {
 		return checkObjectAccessExpr(p, s)
 	case *ParsedModuleAccessExpr:
 		return checkModuleAccessExpr(p, s)
+	case *ParsedAsExpr:
+		return checkAsExpr(p, s)
 	}
 	panic("unreachable")
 }
 
-func checkModuleAccessExpr(p *ParsedModuleAccessExpr, s *Scope) (CheckedExpr, error) {
+func checkAsExpr(p *ParsedAsExpr, s *Scope) (*CheckedAsExpr, error) {
+	val, err := CheckExpr(p.Value, s)
+	if err != nil {
+		return nil, err
+	}
+	if !isScalar(val.TypeId(), s) {
+		return nil, NewError(p.pos(), "expected a scalar type value, but got %s", s.TypeToString(val.TypeId()))
+	}
+	typ, err := checkType(p.Type, s)
+	if err != nil {
+		return nil, err
+	}
+	if !isScalar(typ, s) {
+		return nil, NewError(p.pos(), "expected a scalar type, but got %s", s.TypeToString(typ))
+	}
+	return &CheckedAsExpr{
+		Value: val,
+		Type:  typ,
+	}, nil
+}
+
+func checkModuleAccessExpr(p *ParsedModuleAccessExpr, s *Scope) (*CheckedModuleAccessExpr, error) {
 	importId := s.findImport(string(p.Module.Content))
 	if importId == IMPORT_NOT_FOUND {
 		return nil, NewError(p.Module.Pos, "unresolved import: %s", p.Module.Content)
@@ -494,7 +517,7 @@ func checkModuleAccessExpr(p *ParsedModuleAccessExpr, s *Scope) (CheckedExpr, er
 	}, nil
 }
 
-func checkObjectAccessExpr(p *ParsedObjectAccessExpr, s *Scope) (CheckedExpr, error) {
+func checkObjectAccessExpr(p *ParsedObjectAccessExpr, s *Scope) (*CheckedMemberAccessExpr, error) {
 	object, err := CheckExpr(p.Object, s)
 	if err != nil {
 		return nil, err
@@ -783,14 +806,22 @@ func isTemporaryValue(operand CheckedExpr) bool {
 func traitIsImplemented(trait string, typeId TypeId, s *Scope) bool {
 	switch trait {
 	case NEGATE_TRAIT, ADD_TRAIT, SUBTRACT_TRAIT, MULTIPLY_TRAIT, DIVIDE_TRAIT, ORDERING_TRAIT:
-		return typeId == INT_TYPE_ID || typeId == FLOAT_TYPE_ID
+		return isArithmetic(typeId)
 	case EQUALS_TRAIT:
-		if _, isPointee := s.File.Types[typeId].(*FunctionType); isPointee {
-			return true
-		}
-		return typeId == INT_TYPE_ID || typeId == FLOAT_TYPE_ID || typeId == CHAR_TYPE_ID || typeId == BOOL_TYPE_ID
+		return isScalar(typeId, s)
 	}
 	return false
+}
+
+func isArithmetic(typeId TypeId) bool {
+	return typeId == INT_TYPE_ID || typeId == FLOAT_TYPE_ID
+}
+
+func isScalar(typeId TypeId, s *Scope) bool {
+	if _, isPointee := s.File.Types[typeId].(*FunctionType); isPointee {
+		return true
+	}
+	return isArithmetic(typeId) || typeId == CHAR_TYPE_ID || typeId == BOOL_TYPE_ID
 }
 
 const NEGATE_TRAIT = "Negate"
@@ -1253,6 +1284,11 @@ type CheckedModuleAccessExpr struct {
 	Type   TypeId
 }
 
+type CheckedAsExpr struct {
+	Value CheckedExpr
+	Type  TypeId
+}
+
 func (c *CheckedUnaryExpr) checkedExpr()        {}
 func (c *CheckedBinaryExpr) checkedExpr()       {}
 func (c *CheckedGroupedExpr) checkedExpr()      {}
@@ -1262,6 +1298,7 @@ func (c *CheckedCallExpr) checkedExpr()         {}
 func (c *CheckedStructInitExpr) checkedExpr()   {}
 func (c *CheckedMemberAccessExpr) checkedExpr() {}
 func (c *CheckedModuleAccessExpr) checkedExpr() {}
+func (c *CheckedAsExpr) checkedExpr()           {}
 
 func (c *CheckedUnaryExpr) TypeId() TypeId {
 	return c.Type
@@ -1288,6 +1325,9 @@ func (c *CheckedMemberAccessExpr) TypeId() TypeId {
 	return c.Type
 }
 func (c *CheckedModuleAccessExpr) TypeId() TypeId {
+	return c.Type
+}
+func (c *CheckedAsExpr) TypeId() TypeId {
 	return c.Type
 }
 

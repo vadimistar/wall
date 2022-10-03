@@ -203,6 +203,12 @@ type ParsedModuleAccessExpr struct {
 	Member     ParsedExpr
 }
 
+type ParsedAsExpr struct {
+	Value ParsedExpr
+	As    Token
+	Type  ParsedType
+}
+
 func (u ParsedUnaryExpr) pos() Pos {
 	return u.Operator.Pos
 }
@@ -230,6 +236,9 @@ func (p ParsedObjectAccessExpr) pos() Pos {
 func (p ParsedModuleAccessExpr) pos() Pos {
 	return p.Module.Pos
 }
+func (p ParsedAsExpr) pos() Pos {
+	return p.Value.pos()
+}
 
 func (u ParsedUnaryExpr) expr()        {}
 func (b ParsedBinaryExpr) expr()       {}
@@ -240,6 +249,7 @@ func (c ParsedCallExpr) expr()         {}
 func (s ParsedStructInitExpr) expr()   {}
 func (a ParsedObjectAccessExpr) expr() {}
 func (p ParsedModuleAccessExpr) expr() {}
+func (p ParsedAsExpr) expr()           {}
 
 type ParsedType interface {
 	ParsedNode

@@ -969,3 +969,25 @@ func TestCheckModuleAccessType(t *testing.T) {
 	assert.NoError(t, wall.CheckTypeContents(fileA, checkedFileA))
 	assert.NoError(t, wall.CheckBlocks(fileA, checkedFileA))
 }
+
+func TestCheckAsExpr(t *testing.T) {
+	checkedFile := wall.NewCheckedFile("")
+	got, err := wall.CheckExpr(&wall.ParsedAsExpr{
+		Value: &wall.ParsedLiteralExpr{
+			Token: wall.Token{Kind: wall.INTEGER},
+		},
+		As: wall.Token{Kind: wall.AS},
+		Type: &wall.ParsedIdType{
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("float")},
+		},
+	}, checkedFile.GlobalScope)
+	if assert.NoError(t, err) {
+		assert.Equal(t, &wall.CheckedAsExpr{
+			Value: &wall.CheckedLiteralExpr{
+				Literal: wall.Token{Kind: wall.INTEGER},
+				Type:    wall.INT_TYPE_ID,
+			},
+			Type: wall.FLOAT_TYPE_ID,
+		}, got)
+	}
+}

@@ -553,6 +553,17 @@ func (p *Parser) parsePrimary() (expr ParsedExpr, err error) {
 				Dot:    dot,
 				Member: member,
 			}
+		} else if p.next().Kind == AS {
+			as := p.advance()
+			typ, err := p.parseType()
+			if err != nil {
+				return nil, err
+			}
+			return &ParsedAsExpr{
+				Value: expr,
+				As:    as,
+				Type:  typ,
+			}, nil
 		} else {
 			break
 		}
