@@ -385,6 +385,18 @@ func (s *Scanner) skipWhitespace() {
 		switch s.next() {
 		case ' ', '\t', '\r':
 			s.advance()
+		case '/':
+			if s.peek(1) == '/' {
+				for s.next() != '\n' && s.next() != 0 {
+					s.advance()
+				}
+			} else if s.peek(1) == '*' {
+				for s.next() != 0 && !(s.next() == '*' && s.peek(1) == '/') {
+					s.advance()
+				}
+				s.advance()
+				s.advance()
+			}
 		default:
 			return
 		}
@@ -392,10 +404,14 @@ func (s *Scanner) skipWhitespace() {
 }
 
 func (s *Scanner) next() byte {
-	if s.end >= len(s.source) {
+	return s.peek(0)
+}
+
+func (s *Scanner) peek(offset int) byte {
+	if s.end+offset >= len(s.source) {
 		return 0
 	}
-	return s.source[s.end]
+	return s.source[s.end+offset]
 }
 
 func (s *Scanner) advance() byte {
@@ -406,7 +422,8 @@ func (s *Scanner) advance() byte {
 
 func (s *Scanner) token(t TokenKind) Token {
 	end := mathutil.Clamp(s.end, 0, len(s.source))
-	content := s.source[s.start:end]
+	start := mathutil.Clamp(s.start, 0, len(s.source)-1)
+	content := s.source[start:end]
 	return Token{
 		Pos: Pos{
 			Filename: s.pos.Filename,
