@@ -376,6 +376,31 @@ var parseIfStmtTests = []parseIfStmtTest{
 	},
 }
 
+func TestParseWhileStmt(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{{Kind: wall.WHILE}, {Kind: wall.TRUE}, {Kind: wall.LEFTBRACE}, {Kind: wall.BREAK}, {Kind: wall.NEWLINE}, {Kind: wall.CONTINUE}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE}})
+	got, err := pr.ParseStmtAndEof()
+	if assert.NoError(t, err) {
+		assert.Equal(t, &wall.ParsedWhile{
+			While: wall.Token{Kind: wall.WHILE},
+			Condition: &wall.ParsedLiteralExpr{
+				Token: wall.Token{Kind: wall.TRUE},
+			},
+			Body: &wall.ParsedBlock{
+				Left: wall.Token{Kind: wall.LEFTBRACE},
+				Stmts: []wall.ParsedStmt{
+					&wall.ParsedBreak{
+						Break: wall.Token{Kind: wall.BREAK},
+					},
+					&wall.ParsedContinue{
+						Continue: wall.Token{Kind: wall.CONTINUE},
+					},
+				},
+				Right: wall.Token{Kind: wall.RIGHTBRACE},
+			},
+		}, got)
+	}
+}
+
 func TestParseIfStmt(t *testing.T) {
 	for _, test := range parseIfStmtTests {
 		pr := wall.NewParser(test.tokens)

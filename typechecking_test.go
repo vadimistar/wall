@@ -628,6 +628,38 @@ func TestCheckVarStmt(t *testing.T) {
 	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 }
 
+func TestCheckWhileStmt(t *testing.T) {
+	checkedFile := wall.NewCheckedFile("")
+	got, err := wall.CheckStmt(&wall.ParsedWhile{
+		While: wall.Token{Kind: wall.WHILE},
+		Condition: &wall.ParsedLiteralExpr{
+			Token: wall.Token{Kind: wall.TRUE},
+		},
+		Body: &wall.ParsedBlock{
+			Stmts: []wall.ParsedStmt{
+				&wall.ParsedBreak{},
+				&wall.ParsedContinue{},
+			},
+		},
+	}, checkedFile.GlobalScope, &wall.MayReturn{
+		Type: wall.UNIT_TYPE_ID,
+	})
+	if assert.NoError(t, err) {
+		assert.Equal(t, &wall.CheckedWhile{
+			Cond: &wall.CheckedLiteralExpr{
+				Literal: wall.Token{Kind: wall.TRUE},
+				Type:    wall.BOOL_TYPE_ID,
+			},
+			Body: &wall.CheckedBlock{
+				Stmts: []wall.CheckedStmt{
+					&wall.CheckedBreak{},
+					&wall.CheckedContinue{},
+				},
+			},
+		}, got)
+	}
+}
+
 func TestCheckCallExpr(t *testing.T) {
 	file := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{

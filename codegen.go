@@ -227,8 +227,18 @@ func CodegenStmt(stmt CheckedStmt, s *Scope) string {
 		return codegenReturn(stmt, s)
 	case *CheckedIf:
 		return codegenIf(stmt, s)
+	case *CheckedWhile:
+		return codegenWhile(stmt, s)
+	case *CheckedBreak:
+		return "break;"
+	case *CheckedContinue:
+		return "continue;"
 	}
 	panic("unimplemented")
+}
+
+func codegenWhile(stmt *CheckedWhile, s *Scope) string {
+	return fmt.Sprintf("while (%s) %s", CodegenExpr(stmt.Cond, s), codegenBlock(stmt.Body, s))
 }
 
 func codegenVarStmt(stmt *CheckedVar, s *Scope) string {

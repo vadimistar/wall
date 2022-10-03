@@ -322,10 +322,13 @@ func checkBlock(p *ParsedBlock, s *Scope, controlFlow ControlFlow) (*CheckedBloc
 		}
 	}
 	_, mustReturn := controlFlow.(*MustReturn)
+	_, loop := controlFlow.(*MayReturnFromLoop)
 	for i, stmt := range p.Stmts {
 		var cf ControlFlow
 		if mustReturn && i+1 >= len(p.Stmts) && controlFlow.typeId() != UNIT_TYPE_ID {
 			cf = &MustReturn{Type: controlFlow.typeId()}
+		} else if loop {
+			cf = &MayReturnFromLoop{Type: controlFlow.typeId()}
 		} else {
 			cf = &MayReturn{Type: controlFlow.typeId()}
 		}
@@ -359,8 +362,55 @@ func CheckStmt(stmt ParsedStmt, scope *Scope, controlFlow ControlFlow) (CheckedS
 		return checkReturn(stmt, scope, controlFlow)
 	case *ParsedIf:
 		return checkIf(stmt, scope, controlFlow)
+	case *ParsedWhile:
+		return checkWhile(stmt, scope, controlFlow)
+	case *ParsedBreak:
+		return checkBreak(stmt, scope, controlFlow)
+	case *ParsedContinue:
+		return checkContinue(stmt, scope, controlFlow)
 	}
 	panic("unimplemented")
+}
+
+func checkContinue(p *ParsedContinue, s *Scope, controlFlow ControlFlow) (*CheckedContinue, error) {
+	if _, mayReturnFromLoop := controlFlow.(*MayReturnFromLoop); mayReturnFromLoop {
+		return &CheckedContinue{
+			Continue: p.Continue,
+		}, nil
+	}
+	return nil, NewError(p.pos(), "can't use continue not in a loop")
+}
+
+func checkBreak(p *ParsedBreak, s *Scope, controlFlow ControlFlow) (*CheckedBreak, error) {
+	if _, mayReturnFromLoop := controlFlow.(*MayReturnFromLoop); mayReturnFromLoop {
+		return &CheckedBreak{
+			Break: p.Break,
+		}, nil
+	}
+	return nil, NewError(p.pos(), "can't use break not in a loop")
+}
+
+func checkWhile(p *ParsedWhile, s *Scope, controlFlow ControlFlow) (*CheckedWhile, error) {
+	if _, mustReturn := controlFlow.(*MustReturn); mustReturn {
+		return nil, NewError(p.pos(), "expected return statement")
+	}
+	cond, err := CheckExpr(p.Condition, s)
+	if err != nil {
+		return nil, err
+	}
+	if cond.TypeId() != BOOL_TYPE_ID {
+		return nil, NewError(p.Condition.pos(), "a condition must be a boolean expression, but it's %s", s.TypeToString(cond.TypeId()))
+	}
+	body, err := checkBlock(p.Body, s, &MayReturnFromLoop{
+		Type: controlFlow.typeId(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &CheckedWhile{
+		Cond: cond,
+		Body: body,
+	}, nil
 }
 
 func checkIf(p *ParsedIf, s *Scope, controlFlow ControlFlow) (*CheckedIf, error) {
@@ -372,9 +422,6 @@ func checkIf(p *ParsedIf, s *Scope, controlFlow ControlFlow) (*CheckedIf, error)
 	cond, err := CheckExpr(p.Condition, s)
 	if err != nil {
 		return nil, err
-	}
-	if cond.TypeId() != BOOL_TYPE_ID {
-		return nil, NewError(p.Condition.pos(), "a condition must be a boolean expression, but it's %s", s.TypeToString(cond.TypeId()))
 	}
 	body, err := checkBlock(p.Body, s, controlFlow)
 	if err != nil {
@@ -845,11 +892,17 @@ type MayReturn struct {
 	Type TypeId
 }
 
-func (m *MustReturn) controlFlow() {}
-func (m *MayReturn) controlFlow()  {}
+type MayReturnFromLoop struct {
+	Type TypeId
+}
 
-func (m *MustReturn) typeId() TypeId { return m.Type }
-func (m *MayReturn) typeId() TypeId  { return m.Type }
+func (m *MustReturn) controlFlow()        {}
+func (m *MayReturn) controlFlow()         {}
+func (m *MayReturnFromLoop) controlFlow() {}
+
+func (m *MustReturn) typeId() TypeId        { return m.Type }
+func (m *MayReturn) typeId() TypeId         { return m.Type }
+func (m *MayReturnFromLoop) typeId() TypeId { return m.Type }
 
 func checkType(t ParsedType, s *Scope) (TypeId, error) {
 	switch t := t.(type) {
@@ -1183,11 +1236,27 @@ type CheckedIf struct {
 	ElseBody *CheckedBlock
 }
 
+type CheckedWhile struct {
+	Cond CheckedExpr
+	Body *CheckedBlock
+}
+
+type CheckedBreak struct {
+	Break Token
+}
+
+type CheckedContinue struct {
+	Continue Token
+}
+
 func (c *CheckedVar) checkedStmt()      {}
 func (c *CheckedExprStmt) checkedStmt() {}
 func (c *CheckedBlock) checkedStmt()    {}
 func (c *CheckedReturn) checkedStmt()   {}
 func (c *CheckedIf) checkedStmt()       {}
+func (c *CheckedWhile) checkedStmt()    {}
+func (c *CheckedBreak) checkedStmt()    {}
+func (c *CheckedContinue) checkedStmt() {}
 
 type CheckedExpr interface {
 	checkedExpr()

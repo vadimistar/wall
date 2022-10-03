@@ -124,6 +124,20 @@ type ParsedIf struct {
 	ElseBody  *ParsedBlock
 }
 
+type ParsedWhile struct {
+	While     Token
+	Condition ParsedExpr
+	Body      *ParsedBlock
+}
+
+type ParsedBreak struct {
+	Break Token
+}
+
+type ParsedContinue struct {
+	Continue Token
+}
+
 func (v *ParsedVar) pos() Pos {
 	return v.Id.Pos
 }
@@ -139,12 +153,24 @@ func (r *ParsedReturn) pos() Pos {
 func (i *ParsedIf) pos() Pos {
 	return i.If.Pos
 }
+func (p ParsedWhile) pos() Pos {
+	return p.While.Pos
+}
+func (p ParsedBreak) pos() Pos {
+	return p.Break.Pos
+}
+func (p ParsedContinue) pos() Pos {
+	return p.Continue.Pos
+}
 
 func (v *ParsedVar) stmt()      {}
 func (e *ParsedExprStmt) stmt() {}
 func (b *ParsedBlock) stmt()    {}
 func (r *ParsedReturn) stmt()   {}
 func (i *ParsedIf) stmt()       {}
+func (p *ParsedWhile) stmt()    {}
+func (p *ParsedBreak) stmt()    {}
+func (p *ParsedContinue) stmt() {}
 
 type ParsedExpr interface {
 	ParsedNode

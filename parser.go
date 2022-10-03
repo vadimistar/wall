@@ -310,6 +310,29 @@ func (p *Parser) ParseStmt() (ParsedStmt, error) {
 			Condition: cond,
 			Body:      body,
 		}, nil
+	case WHILE:
+		kw := p.advance()
+		cond, err := p.ParseExpr()
+		if err != nil {
+			return nil, err
+		}
+		body, err := p.parseBlock()
+		if err != nil {
+			return nil, err
+		}
+		return &ParsedWhile{
+			While:     kw,
+			Condition: cond,
+			Body:      body,
+		}, nil
+	case BREAK:
+		return &ParsedBreak{
+			Break: p.advance(),
+		}, nil
+	case CONTINUE:
+		return &ParsedContinue{
+			Continue: p.advance(),
+		}, nil
 	}
 	expr, err := p.ParseExpr()
 	if err != nil {

@@ -49,6 +49,9 @@ const (
 	IF
 	ELSE
 	AS
+	WHILE
+	BREAK
+	CONTINUE
 )
 
 func (t TokenKind) String() string {
@@ -127,6 +130,12 @@ func (t TokenKind) String() string {
 		return "ELSE"
 	case AS:
 		return "AS"
+	case WHILE:
+		return "WHILE"
+	case BREAK:
+		return "BREAK"
+	case CONTINUE:
+		return "CONTINUE"
 	}
 	panic("unreachable")
 }
@@ -329,6 +338,15 @@ func (s *Scanner) id() Token {
 	}
 	if bytes.Equal(t.Content, []byte("as")) {
 		t.Kind = AS
+	}
+	if bytes.Equal(t.Content, []byte("while")) {
+		t.Kind = WHILE
+	}
+	if bytes.Equal(t.Content, []byte("break")) {
+		t.Kind = BREAK
+	}
+	if bytes.Equal(t.Content, []byte("continue")) {
+		t.Kind = CONTINUE
 	}
 	return t
 }

@@ -53,6 +53,9 @@ var scanTokensTests = []scanTokensTest{
 	{[]byte("if"), []wall.TokenKind{wall.IF, wall.EOF}},
 	{[]byte("else"), []wall.TokenKind{wall.ELSE, wall.EOF}},
 	{[]byte("as"), []wall.TokenKind{wall.AS, wall.EOF}},
+	{[]byte("while"), []wall.TokenKind{wall.WHILE, wall.EOF}},
+	{[]byte("break"), []wall.TokenKind{wall.BREAK, wall.EOF}},
+	{[]byte("continue"), []wall.TokenKind{wall.CONTINUE, wall.EOF}},
 }
 
 func TestScanTokens(t *testing.T) {
