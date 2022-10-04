@@ -207,11 +207,11 @@ func validateMain(pos Pos, paramTypes []TypeId, returnType TypeId, c *CheckedFil
 	constChar := c.TypeId(&PointerType{
 		Type: CHAR_TYPE_ID,
 	})
-	if !reflect.DeepEqual(paramTypes, []TypeId{}) && !reflect.DeepEqual(paramTypes, []TypeId{INT_TYPE_ID, constChar}) {
-		return NewError(pos, "invalid params in main function: %s (expected [] or [int, **char])", c.GlobalScope.typesToStrings(paramTypes))
+	if !reflect.DeepEqual(paramTypes, []TypeId{}) && !reflect.DeepEqual(paramTypes, []TypeId{INT32_TYPE_ID, constChar}) {
+		return NewError(pos, "invalid params in main function: %s (expected [] or [int32, **char])", c.GlobalScope.typesToStrings(paramTypes))
 	}
-	if !reflect.DeepEqual(returnType, INT_TYPE_ID) {
-		return NewError(pos, "invalid return type in main function: %s (expected int)", c.GlobalScope.TypeToString(returnType))
+	if !reflect.DeepEqual(returnType, INT32_TYPE_ID) {
+		return NewError(pos, "invalid return type in main function: %s (expected int32)", c.GlobalScope.TypeToString(returnType))
 	}
 	return nil
 }
@@ -707,12 +707,12 @@ func checkLiteralExpr(p *ParsedLiteralExpr, s *Scope) (*CheckedLiteralExpr, erro
 	case INTEGER:
 		return &CheckedLiteralExpr{
 			Literal: p.Token,
-			Type:    INT_TYPE_ID,
+			Type:    INT32_TYPE_ID,
 		}, nil
 	case FLOAT:
 		return &CheckedLiteralExpr{
 			Literal: p.Token,
-			Type:    FLOAT_TYPE_ID,
+			Type:    FLOAT64_TYPE_ID,
 		}, nil
 	case STRING:
 		return &CheckedLiteralExpr{
@@ -884,7 +884,11 @@ func traitIsImplemented(trait string, typeId TypeId, s *Scope) bool {
 }
 
 func isArithmetic(typeId TypeId) bool {
-	return typeId == INT_TYPE_ID || typeId == FLOAT_TYPE_ID
+	return typeId == INT_TYPE_ID || typeId == INT8_TYPE_ID ||
+		typeId == INT16_TYPE_ID || typeId == INT32_TYPE_ID || typeId ==
+		INT64_TYPE_ID || typeId == UINT_TYPE_ID || typeId == UINT8_TYPE_ID ||
+		typeId == UINT16_TYPE_ID || typeId == UINT32_TYPE_ID || typeId ==
+		UINT64_TYPE_ID || typeId == FLOAT32_TYPE_ID || typeId == FLOAT64_TYPE_ID
 }
 
 func isScalar(typeId TypeId, s *Scope) bool {
@@ -935,8 +939,28 @@ func checkType(t ParsedType, s *Scope) (TypeId, error) {
 			return UNIT_TYPE_ID, nil
 		case "int":
 			return INT_TYPE_ID, nil
-		case "float":
-			return FLOAT_TYPE_ID, nil
+		case "int8":
+			return INT8_TYPE_ID, nil
+		case "int16":
+			return INT16_TYPE_ID, nil
+		case "int32":
+			return INT32_TYPE_ID, nil
+		case "int64":
+			return INT64_TYPE_ID, nil
+		case "uint":
+			return UINT_TYPE_ID, nil
+		case "uint8":
+			return UINT8_TYPE_ID, nil
+		case "uint16":
+			return UINT16_TYPE_ID, nil
+		case "uint32":
+			return UINT32_TYPE_ID, nil
+		case "uint64":
+			return UINT64_TYPE_ID, nil
+		case "float32":
+			return FLOAT32_TYPE_ID, nil
+		case "float64":
+			return FLOAT64_TYPE_ID, nil
 		case "char":
 			return CHAR_TYPE_ID, nil
 		case "bool":
@@ -1185,10 +1209,35 @@ func NewCheckedFile(filename string) *CheckedFile {
 		GlobalScope: NewScope(nil),
 	}
 	c.GlobalScope.File = c
+	panicIf(len(c.Types) != int(UNIT_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: []byte("()")}, &BuildinType{})
+	panicIf(len(c.Types) != int(INT_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: []byte("int")}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: []byte("float")}, &BuildinType{})
+	panicIf(len(c.Types) != int(INT8_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("int8")}, &BuildinType{})
+	panicIf(len(c.Types) != int(INT16_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("int16")}, &BuildinType{})
+	panicIf(len(c.Types) != int(INT32_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("int32")}, &BuildinType{})
+	panicIf(len(c.Types) != int(INT64_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("int64")}, &BuildinType{})
+	panicIf(len(c.Types) != int(UINT_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("uint")}, &BuildinType{})
+	panicIf(len(c.Types) != int(UINT8_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("uint8")}, &BuildinType{})
+	panicIf(len(c.Types) != int(UINT16_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("uint16")}, &BuildinType{})
+	panicIf(len(c.Types) != int(UINT32_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("uint32")}, &BuildinType{})
+	panicIf(len(c.Types) != int(UINT64_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("uint64")}, &BuildinType{})
+	panicIf(len(c.Types) != int(FLOAT32_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("float32")}, &BuildinType{})
+	panicIf(len(c.Types) != int(FLOAT64_TYPE_ID))
+	c.GlobalScope.DefineType(&Token{Content: []byte("float64")}, &BuildinType{})
+	panicIf(len(c.Types) != int(CHAR_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: []byte("char")}, &BuildinType{})
+	panicIf(len(c.Types) != int(BOOL_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: []byte("bool")}, &BuildinType{})
 	constChar := c.TypeId(&PointerType{
 		Type: CHAR_TYPE_ID,
@@ -1198,6 +1247,12 @@ func NewCheckedFile(filename string) *CheckedFile {
 		Returns: UNIT_TYPE_ID,
 	})
 	return c
+}
+
+func panicIf(b bool) {
+	if b {
+		panic(b)
+	}
 }
 
 func (c *CheckedFile) TypeId(t Type) TypeId {
@@ -1448,7 +1503,17 @@ const NEVER_TYPE_ID TypeId = -2
 const (
 	UNIT_TYPE_ID TypeId = iota
 	INT_TYPE_ID
-	FLOAT_TYPE_ID
+	INT8_TYPE_ID
+	INT16_TYPE_ID
+	INT32_TYPE_ID
+	INT64_TYPE_ID
+	UINT_TYPE_ID
+	UINT8_TYPE_ID
+	UINT16_TYPE_ID
+	UINT32_TYPE_ID
+	UINT64_TYPE_ID
+	FLOAT32_TYPE_ID
+	FLOAT64_TYPE_ID
 	CHAR_TYPE_ID
 	BOOL_TYPE_ID
 )

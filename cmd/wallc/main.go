@@ -27,6 +27,7 @@ func main() {
 	if *cHeaders {
 		fmt.Println("#include <stdlib.h>")
 		fmt.Println("#include <stdio.h>")
+		fmt.Println("#include <stdint.h>")
 	}
 	fmt.Println(cSource)
 }

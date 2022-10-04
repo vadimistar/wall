@@ -472,8 +472,28 @@ func CodegenType(id TypeId, s *Scope) string {
 			return "void"
 		case INT_TYPE_ID, BOOL_TYPE_ID:
 			return "int"
-		case FLOAT_TYPE_ID:
+		case INT8_TYPE_ID:
+			return "int8_t"
+		case INT16_TYPE_ID:
+			return "int16_t"
+		case INT32_TYPE_ID:
+			return "int32_t"
+		case INT64_TYPE_ID:
+			return "int64_t"
+		case UINT_TYPE_ID:
+			return "unsigned int"
+		case UINT8_TYPE_ID:
+			return "uint8_t"
+		case UINT16_TYPE_ID:
+			return "uint16_t"
+		case UINT32_TYPE_ID:
+			return "uint32_t"
+		case UINT64_TYPE_ID:
+			return "uint64_t"
+		case FLOAT32_TYPE_ID:
 			return "float"
+		case FLOAT64_TYPE_ID:
+			return "double"
 		case CHAR_TYPE_ID:
 			return "char"
 		default:

@@ -174,7 +174,7 @@ var checkBlocksTests = []checkBlocksTest{
 			},
 		},
 		returnType: &wall.ParsedIdType{
-			Token: wall.Token{Content: []byte("int")},
+			Token: wall.Token{Content: []byte("int32")},
 		},
 	},
 	{
@@ -217,7 +217,7 @@ var checkBlocksTests = []checkBlocksTest{
 			},
 		},
 		returnType: &wall.ParsedIdType{
-			Token: wall.Token{Content: []byte("int")},
+			Token: wall.Token{Content: []byte("int32")},
 		},
 	},
 	{
@@ -234,7 +234,7 @@ var checkBlocksTests = []checkBlocksTest{
 			},
 		},
 		returnType: &wall.ParsedIdType{
-			Token: wall.Token{Content: []byte("int")},
+			Token: wall.Token{Content: []byte("int32")},
 		},
 	},
 }
@@ -288,13 +288,13 @@ var checkExprTests = []checkExprTest{
 		expr: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 		},
-		typeid: wall.INT_TYPE_ID,
+		typeid: wall.INT32_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0.0")},
 		},
-		typeid: wall.FLOAT_TYPE_ID,
+		typeid: wall.FLOAT64_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedGroupedExpr{
@@ -302,7 +302,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
-		typeid: wall.FLOAT_TYPE_ID,
+		typeid: wall.FLOAT64_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedUnaryExpr{
@@ -311,7 +311,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
-		typeid: wall.INT_TYPE_ID,
+		typeid: wall.INT32_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedUnaryExpr{
@@ -320,7 +320,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
-		typeid: wall.FLOAT_TYPE_ID,
+		typeid: wall.FLOAT64_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedBinaryExpr{
@@ -332,7 +332,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
-		typeid: wall.INT_TYPE_ID,
+		typeid: wall.INT32_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedBinaryExpr{
@@ -344,7 +344,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
-		typeid: wall.INT_TYPE_ID,
+		typeid: wall.INT32_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedBinaryExpr{
@@ -356,7 +356,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
-		typeid: wall.INT_TYPE_ID,
+		typeid: wall.INT32_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedBinaryExpr{
@@ -368,7 +368,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 			},
 		},
-		typeid: wall.INT_TYPE_ID,
+		typeid: wall.INT32_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedBinaryExpr{
@@ -452,7 +452,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
-		typeid: wall.FLOAT_TYPE_ID,
+		typeid: wall.FLOAT64_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedBinaryExpr{
@@ -464,7 +464,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
-		typeid: wall.FLOAT_TYPE_ID,
+		typeid: wall.FLOAT64_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedBinaryExpr{
@@ -476,7 +476,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
-		typeid: wall.FLOAT_TYPE_ID,
+		typeid: wall.FLOAT64_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedBinaryExpr{
@@ -488,7 +488,7 @@ var checkExprTests = []checkExprTest{
 				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
 			},
 		},
-		typeid: wall.FLOAT_TYPE_ID,
+		typeid: wall.FLOAT64_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedBinaryExpr{
@@ -607,7 +607,7 @@ func TestCheckVarStmt(t *testing.T) {
 						&wall.ParsedVar{
 							Id: wall.Token{Content: []byte("b")},
 							Type: &wall.ParsedIdType{
-								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int32")},
 							},
 						},
 						&wall.ParsedReturn{
@@ -618,7 +618,7 @@ func TestCheckVarStmt(t *testing.T) {
 					},
 				},
 				ReturnType: &wall.ParsedIdType{
-					Token: wall.Token{Content: []byte("int")},
+					Token: wall.Token{Content: []byte("int32")},
 				},
 			},
 		},
@@ -669,17 +669,17 @@ func TestCheckCallExpr(t *testing.T) {
 					{
 						Id: wall.Token{Content: []byte("a")},
 						Type: &wall.ParsedIdType{
-							Token: wall.Token{Content: []byte("int")},
+							Token: wall.Token{Content: []byte("int32")},
 						},
 					},
 					{
 						Id: wall.Token{Content: []byte("b")},
 						Type: &wall.ParsedIdType{
-							Token: wall.Token{Content: []byte("int")},
+							Token: wall.Token{Content: []byte("int32")},
 						},
 					},
 				},
-				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: []byte("int")}},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: []byte("int32")}},
 				Body:       &wall.ParsedBlock{Stmts: []wall.ParsedStmt{&wall.ParsedReturn{Arg: &wall.ParsedLiteralExpr{Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")}}}}},
 			},
 			&wall.ParsedFunDef{
@@ -758,13 +758,13 @@ func TestCheckStructInitExpr(t *testing.T) {
 					{
 						Name: wall.Token{Content: []byte("x")},
 						Type: &wall.ParsedIdType{
-							Token: wall.Token{Content: []byte("int")},
+							Token: wall.Token{Content: []byte("int32")},
 						},
 					},
 					{
 						Name: wall.Token{Content: []byte("y")},
 						Type: &wall.ParsedIdType{
-							Token: wall.Token{Content: []byte("float")},
+							Token: wall.Token{Content: []byte("float64")},
 						},
 					},
 				},
@@ -812,18 +812,18 @@ func TestCheckStructAccessExpr(t *testing.T) {
 				Fields: []wall.ParsedStructField{
 					{
 						Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("x")},
-						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")}},
+						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int32")}},
 					},
 					{
 						Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("y")},
-						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")}},
+						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int32")}},
 					},
 				},
 			},
 			&wall.ParsedFunDef{
 				Id:         wall.Token{Kind: wall.IDENTIFIER, Content: []byte("main")},
 				Params:     []wall.ParsedFunParam{},
-				ReturnType: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")}},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int32")}},
 				Body: &wall.ParsedBlock{
 					Left: wall.Token{Kind: wall.LEFTBRACE},
 					Stmts: []wall.ParsedStmt{
@@ -916,10 +916,10 @@ func TestCheckAssignExpr(t *testing.T) {
 			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
 		},
 	}
-	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")}, wall.INT_TYPE_ID)
+	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")}, wall.INT32_TYPE_ID)
 	checkedExpr, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
 	if assert.NoError(t, err) {
-		assert.Equal(t, checkedExpr.TypeId(), wall.INT_TYPE_ID)
+		assert.Equal(t, checkedExpr.TypeId(), wall.INT32_TYPE_ID)
 	}
 }
 
@@ -1010,16 +1010,16 @@ func TestCheckAsExpr(t *testing.T) {
 		},
 		As: wall.Token{Kind: wall.AS},
 		Type: &wall.ParsedIdType{
-			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("float")},
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("float64")},
 		},
 	}, checkedFile.GlobalScope)
 	if assert.NoError(t, err) {
 		assert.Equal(t, &wall.CheckedAsExpr{
 			Value: &wall.CheckedLiteralExpr{
 				Literal: wall.Token{Kind: wall.INTEGER},
-				Type:    wall.INT_TYPE_ID,
+				Type:    wall.INT32_TYPE_ID,
 			},
-			Type: wall.FLOAT_TYPE_ID,
+			Type: wall.FLOAT64_TYPE_ID,
 		}, got)
 	}
 }
