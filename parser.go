@@ -32,67 +32,70 @@ func NewParser(tokens []Token) Parser {
 	}
 }
 
-func ParseCompilationUnit(filename string, source string) (*ParsedFile, error) {
-	file, err := ParseFile(filename, source)
+func ParseCompilationUnit(filename, source, workpath string) (*ParsedFile, error) {
+	parsed, err := resolveImports(Pos{}, filename, make(map[string]*ParsedFile), workpath)
 	if err != nil {
 		return nil, err
 	}
-	if err := resolveImports(file, make(map[string]*ParsedFile)); err != nil {
-		return nil, err
-	}
-	return file, nil
+	return parsed, nil
 }
 
-func resolveImports(file *ParsedFile, parsedModules map[string]*ParsedFile) error {
-	absImportedFilename, err := filepath.Abs(file.pos().Filename)
-	if err != nil {
-		return err
+func resolveImports(importPos Pos, filename string, parsedModules map[string]*ParsedFile, workpath string) (*ParsedFile, error) {
+	absPath := filepath.Join(workpath, filename)
+	if parsedFile, isParsed := parsedModules[absPath]; isParsed {
+		return parsedFile, nil
 	}
-	parsedModules[absImportedFilename] = file
-	for i, def := range file.Defs {
-		switch importDef := def.(type) {
+	source, err := os.ReadFile(absPath)
+	if err != nil {
+		return nil, NewError(importPos, "unresolved import: %s (%s)", filename, err)
+	}
+	parsedFile, err := ParseFile(filename, string(source))
+	if err != nil {
+		return nil, err
+	}
+	parsedModules[absPath] = parsedFile
+	for _, def := range parsedFile.Defs {
+		switch def := def.(type) {
 		case *ParsedImport:
-			resolvedImport, err := resolveImport(importDef, parsedModules)
+			resolved, err := resolveImports(def.pos(), moduleToFilename(def.id()), parsedModules, workpath)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			file.Defs[i] = resolvedImport
+			def.File = resolved
 		}
 	}
-	return nil
+	return parsedFile, nil
 }
 
-func resolveImport(def *ParsedImport, parsedModules map[string]*ParsedFile) (*ParsedImport, error) {
-	importedFilename := filepath.Join(filepath.Dir(def.Import.Filename), moduleToFilename(string(def.Name.Content)))
-	absImportedFilename, err := filepath.Abs(importedFilename)
-	if err != nil {
-		return nil, err
-	}
-	if module, ok := parsedModules[absImportedFilename]; ok {
-		return &ParsedImport{
-			Import: def.Import,
-			Name:   def.Name,
-			File:   module,
-		}, nil
-	}
-	source, err := os.ReadFile(importedFilename)
-	if err != nil {
-		return nil, NewError(def.pos(), "unresolved import: %s (%s)", def.Name.Content, err)
-	}
-	parsedFile, err := ParseFile(importedFilename, string(source))
-	if err != nil {
-		return nil, err
-	}
-	parsedModules[absImportedFilename] = parsedFile
-	if err := resolveImports(parsedFile, parsedModules); err != nil {
-		return nil, err
-	}
-	return &ParsedImport{
-		Import: def.Import,
-		Name:   def.Name,
-		File:   parsedFile,
-	}, nil
-}
+// func resolveImport(def *ParsedImport, parsedModules map[string]*ParsedFile, filename, workpath string) (*ParsedImport, error) {
+// 	if module, ok := parsedModules[filename]; ok {
+// 		return &ParsedImport{
+// 			Import: def.Import,
+// 			Name:   def.Name,
+// 			File:   module,
+// 		}, nil
+// 	}
+// 	source, err := os.ReadFile(filename)
+// 	if err != nil {
+// 		return nil, NewError(def.pos(), "unresolved import: %s (%s)", def.Name.Content, err)
+// 	}
+// 	relPath, err := filepath.Rel(workpath, filename)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	parsedFile, err := ParseFile(relPath, string(source))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if err := resolveImports(parsedFile, parsedModules, workpath); err != nil {
+// 		return nil, err
+// 	}
+// 	return &ParsedImport{
+// 		Import: def.Import,
+// 		Name:   def.Name,
+// 		File:   parsedFile,
+// 	}, nil
+// }
 
 func moduleToFilename(name string) string {
 	const WALL_EXTENSION = ".wall"

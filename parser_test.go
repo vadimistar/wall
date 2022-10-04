@@ -657,7 +657,7 @@ func TestParseCompilationUnit(t *testing.T) {
 	if err := os.WriteFile("C.wl", []byte("import A\nfun c() {}\n"), 0666); err != nil {
 		t.Fatal(err)
 	}
-	A, err := wall.ParseCompilationUnit("A.wl", "import B\nfun a() {}\n")
+	A, err := wall.ParseCompilationUnit("A.wl", "import B\nfun a() {}\n", "")
 	if err != nil {
 		t.Fatal(err)
 	}

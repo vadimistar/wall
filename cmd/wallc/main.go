@@ -19,8 +19,9 @@ func main() {
 	}
 	bytes, err := os.ReadFile(source)
 	check(err)
+	workpath := filepath.Dir(source)
 	source = filepath.Base(source)
-	parsedFile, err := wall.ParseCompilationUnit(source, string(bytes))
+	parsedFile, err := wall.ParseCompilationUnit(source, string(bytes), workpath)
 	check(err)
 	if *emitParsedAst {
 		j, err := json.Marshal(parsedFile)
