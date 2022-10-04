@@ -7,23 +7,23 @@ import (
 )
 
 func CheckCompilationUnit(f *ParsedFile) (*CheckedFile, error) {
-	checkedFile := NewCheckedFile(f.pos().Filename)
-	if err := CheckImports(f, checkedFile); err != nil {
+	checkedUnit := NewCheckedCompilationUnit(f.pos().Filename)
+	if err := CheckImports(f, checkedUnit); err != nil {
 		return nil, err
 	}
-	if err := CheckTypeSignatures(f, checkedFile); err != nil {
+	if err := CheckTypeSignatures(f, checkedUnit); err != nil {
 		return nil, err
 	}
-	if err := CheckFunctionSignatures(f, checkedFile); err != nil {
+	if err := CheckFunctionSignatures(f, checkedUnit); err != nil {
 		return nil, err
 	}
-	if err := CheckTypeContents(f, checkedFile); err != nil {
+	if err := CheckTypeContents(f, checkedUnit); err != nil {
 		return nil, err
 	}
-	if err := CheckBlocks(f, checkedFile); err != nil {
+	if err := CheckBlocks(f, checkedUnit); err != nil {
 		return nil, err
 	}
-	return checkedFile, nil
+	return checkedUnit, nil
 }
 
 func CheckImports(f *ParsedFile, c *CheckedFile) error {
@@ -45,7 +45,7 @@ func checkImports(f *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFile]*C
 			if file, checked := checkedFiles[def.File]; checked {
 				checkedFile = file
 			} else {
-				checkedFile = NewCheckedFile(def.File.pos().Filename)
+				checkedFile = NewCheckedFile(def.File.pos().Filename, c.Types)
 			}
 			checkedImport := &CheckedImport{
 				Name: def.Name,
@@ -269,7 +269,7 @@ func checkStructContents(def *ParsedStructDef, c *CheckedStructDef, s *Scope) er
 			Type: checkedType,
 		})
 	}
-	structType := s.File.Types[s.findType(string(def.Name.Content)).TypeId].(*StructType)
+	structType := (*s.File.Types)[s.findType(string(def.Name.Content)).TypeId].(*StructType)
 	structType.Fields = fields
 	return nil
 }
@@ -591,7 +591,7 @@ func checkObjectAccessExpr(p *ParsedObjectAccessExpr, s *Scope) (*CheckedMemberA
 	if err != nil {
 		return nil, err
 	}
-	structType, isStructType := s.File.Types[object.TypeId()].(*StructType)
+	structType, isStructType := (*s.File.Types)[object.TypeId()].(*StructType)
 	if !isStructType {
 		return nil, NewError(p.pos(), "can't use . operator: expected struct type, but got %s", s.TypeToString(object.TypeId()))
 	}
@@ -613,7 +613,7 @@ func checkStructInitExpr(p *ParsedStructInitExpr, s *Scope) (*CheckedStructInitE
 	if structName == nil {
 		return nil, NewError(p.pos(), "struct is not declared: %s", p.Name.Content)
 	}
-	structType, ok := s.File.Types[structName.TypeId].(*StructType)
+	structType, ok := (*s.File.Types)[structName.TypeId].(*StructType)
 	if !ok {
 		return nil, NewError(p.pos(), "name is not a struct: %s", p.Name.Content)
 	}
@@ -669,7 +669,7 @@ func checkCallExpr(p *ParsedCallExpr, s *Scope) (*CheckedCallExpr, error) {
 	if err != nil {
 		return nil, err
 	}
-	if funType, ok := s.File.Types[callee.TypeId()].(*FunctionType); ok {
+	if funType, ok := (*s.File.Types)[callee.TypeId()].(*FunctionType); ok {
 		args := make([]CheckedExpr, 0, len(p.Args))
 		for _, arg := range p.Args {
 			checkedArg, err := CheckExpr(arg, s)
@@ -852,7 +852,7 @@ func checkUnaryOperator(operator Token, operand CheckedExpr, s *Scope) (CheckedU
 			Type: operand.TypeId(),
 		}), nil
 	case STAR:
-		if pointerType, isPointer := s.File.Types[operand.TypeId()].(*PointerType); isPointer {
+		if pointerType, isPointer := (*s.File.Types)[operand.TypeId()].(*PointerType); isPointer {
 			return CHECKED_DEREF, pointerType.Type, nil
 		}
 		return INVALID_UNARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "can't use * operator on %s (a pointer type is expected)", s.TypeToString(operand.TypeId()))
@@ -891,7 +891,7 @@ func isArithmetic(typeId TypeId) bool {
 }
 
 func isScalar(typeId TypeId, s *Scope) bool {
-	if _, isPointee := s.File.Types[typeId].(*PointerType); isPointee {
+	if _, isPointee := (*s.File.Types)[typeId].(*PointerType); isPointee {
 		return true
 	}
 	return isArithmetic(typeId) || typeId == CHAR_TYPE_ID || typeId == BOOL_TYPE_ID
@@ -1043,10 +1043,10 @@ func (s *Scope) DefineType(token *Token, typ Type) error {
 	if s.findType(string(token.Content)) != nil {
 		return NewError(token.Pos, "type %s is already defined", token.Content)
 	}
-	s.File.Types = append(s.File.Types, typ)
+	*s.File.Types = append((*s.File.Types), typ)
 	s.Types[string(token.Content)] = &TypeName{
 		Token:  token,
-		TypeId: TypeId(len(s.File.Types) - 1),
+		TypeId: TypeId(len((*s.File.Types)) - 1),
 	}
 	return nil
 }
@@ -1066,10 +1066,10 @@ func (s *Scope) DefineFunction(token *Token, typ *FunctionType) error {
 	if s.findName(string(token.Content)) != nil {
 		return NewError(token.Pos, "%s is already declared", token.Content)
 	}
-	s.File.Types = append(s.File.Types, typ)
+	(*s.File.Types) = append((*s.File.Types), typ)
 	s.Funs[string(token.Content)] = &Name{
 		Token:  token,
-		TypeId: TypeId(len(s.File.Types) - 1),
+		TypeId: TypeId(len((*s.File.Types)) - 1),
 	}
 	return nil
 }
@@ -1136,23 +1136,46 @@ func (s *Scope) findType(name string) *TypeName {
 }
 
 func (s *Scope) TypeToString(typeId TypeId) string {
-	switch t := s.File.Types[typeId].(type) {
+	switch t := (*s.File.Types)[typeId].(type) {
 	case *BuildinType, *IdType, *StructType:
-		for name, t := range s.Types {
-			if t.TypeId == typeId {
-				return name
-			}
-		}
-		if s.Parent != nil {
-			return s.Parent.TypeToString(typeId)
-		}
-		panic("unreachable")
+		res := findIdTypeInFile(typeId, s.File, make(map[*CheckedFile]struct{}))
+		return res
 	case *PointerType:
 		return "*" + s.TypeToString(t.Type)
 	case *FunctionType:
 		return fmt.Sprintf("fun (%s) %s", strings.Join(s.typesToStrings(t.Params), ", "), s.TypeToString(t.Returns))
 	}
 	panic("unreachable")
+}
+
+func findIdTypeInFile(typeId TypeId, f *CheckedFile, checked map[*CheckedFile]struct{}) string {
+	if _, checked := checked[f]; checked {
+		return ""
+	}
+	checked[f] = struct{}{}
+	if found := findIdTypeInScope(typeId, f.GlobalScope); found != "" {
+		return found
+	}
+	for _, imp := range f.Imports {
+		if found := findIdTypeInFile(typeId, imp.File, checked); found != "" {
+			return found
+		}
+	}
+	panic("unreachable")
+}
+
+func findIdTypeInScope(typeId TypeId, s *Scope) string {
+	for name, t := range s.Types {
+		if t.TypeId == typeId {
+			return name
+		}
+	}
+	for _, child := range s.Children {
+		if t := findIdTypeInScope(typeId, child); t != "" {
+			return t
+		}
+	}
+	return ""
 }
 
 func (s *Scope) findAndRenameType(name string, newName string) bool {
@@ -1194,50 +1217,70 @@ type CheckedFile struct {
 	ExternFuns  []*CheckedExternFunDef
 	Structs     []*CheckedStructDef
 	Typealiases []*CheckedTypealiasDef
-	Types       []Type
+	Types       *[]Type
 	GlobalScope *Scope
 }
 
-func NewCheckedFile(filename string) *CheckedFile {
+func NewCheckedCompilationUnit(filename string) *CheckedFile {
+	types := &[]Type{}
 	c := &CheckedFile{
 		Filename:    filename,
 		Imports:     make([]*CheckedImport, 0),
 		Funs:        make([]*CheckedFunDef, 0),
 		Structs:     make([]*CheckedStructDef, 0),
-		Types:       make([]Type, 0),
+		Types:       types,
 		GlobalScope: NewScope(nil),
 	}
 	c.GlobalScope.File = c
-	panicIf(len(c.Types) != int(UNIT_TYPE_ID))
+	panicIf(len(*c.Types) != int(UNIT_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "()"}, &BuildinType{})
-	panicIf(len(c.Types) != int(INT_TYPE_ID))
+	panicIf(len(*c.Types) != int(INT_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "int"}, &BuildinType{})
-	panicIf(len(c.Types) != int(INT8_TYPE_ID))
+	panicIf(len(*c.Types) != int(INT8_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "int8"}, &BuildinType{})
-	panicIf(len(c.Types) != int(INT16_TYPE_ID))
+	panicIf(len(*c.Types) != int(INT16_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "int16"}, &BuildinType{})
-	panicIf(len(c.Types) != int(INT32_TYPE_ID))
+	panicIf(len(*c.Types) != int(INT32_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "int32"}, &BuildinType{})
-	panicIf(len(c.Types) != int(INT64_TYPE_ID))
+	panicIf(len(*c.Types) != int(INT64_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "int64"}, &BuildinType{})
-	panicIf(len(c.Types) != int(UINT_TYPE_ID))
+	panicIf(len(*c.Types) != int(UINT_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "uint"}, &BuildinType{})
-	panicIf(len(c.Types) != int(UINT8_TYPE_ID))
+	panicIf(len(*c.Types) != int(UINT8_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "uint8"}, &BuildinType{})
-	panicIf(len(c.Types) != int(UINT16_TYPE_ID))
+	panicIf(len(*c.Types) != int(UINT16_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "uint16"}, &BuildinType{})
-	panicIf(len(c.Types) != int(UINT32_TYPE_ID))
+	panicIf(len(*c.Types) != int(UINT32_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "uint32"}, &BuildinType{})
-	panicIf(len(c.Types) != int(UINT64_TYPE_ID))
+	panicIf(len(*c.Types) != int(UINT64_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "uint64"}, &BuildinType{})
-	panicIf(len(c.Types) != int(FLOAT32_TYPE_ID))
+	panicIf(len(*c.Types) != int(FLOAT32_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "float32"}, &BuildinType{})
-	panicIf(len(c.Types) != int(FLOAT64_TYPE_ID))
+	panicIf(len(*c.Types) != int(FLOAT64_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "float64"}, &BuildinType{})
-	panicIf(len(c.Types) != int(CHAR_TYPE_ID))
+	panicIf(len(*c.Types) != int(CHAR_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "char"}, &BuildinType{})
-	panicIf(len(c.Types) != int(BOOL_TYPE_ID))
+	panicIf(len(*c.Types) != int(BOOL_TYPE_ID))
 	c.GlobalScope.DefineType(&Token{Content: "bool"}, &BuildinType{})
+	defineInlineC(c)
+	return c
+}
+
+func NewCheckedFile(filename string, types *[]Type) *CheckedFile {
+	c := &CheckedFile{
+		Filename:    filename,
+		Imports:     make([]*CheckedImport, 0),
+		Funs:        make([]*CheckedFunDef, 0),
+		Structs:     make([]*CheckedStructDef, 0),
+		Types:       types,
+		GlobalScope: NewScope(nil),
+	}
+	c.GlobalScope.File = c
+	defineInlineC(c)
+	return c
+}
+
+func defineInlineC(c *CheckedFile) {
 	constChar := c.TypeId(&PointerType{
 		Type: CHAR_TYPE_ID,
 	})
@@ -1245,23 +1288,22 @@ func NewCheckedFile(filename string) *CheckedFile {
 		Params:  []TypeId{constChar},
 		Returns: UNIT_TYPE_ID,
 	})
-	return c
 }
 
 func panicIf(b bool) {
 	if b {
-		panic(b)
+		panic("unreachable")
 	}
 }
 
 func (c *CheckedFile) TypeId(t Type) TypeId {
-	for i, typ := range c.Types {
+	for i, typ := range *c.Types {
 		if reflect.DeepEqual(t, typ) {
 			return TypeId(i)
 		}
 	}
-	c.Types = append(c.Types, t)
-	return TypeId(len(c.Types) - 1)
+	*c.Types = append(*c.Types, t)
+	return TypeId(len(*c.Types) - 1)
 }
 
 type CheckedImport struct {

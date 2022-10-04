@@ -33,7 +33,7 @@ func codegenFuncTypedefs(c *CheckedFile, checkedFiles map[*CheckedFile]struct{})
 	}
 	checkedFiles[c] = struct{}{}
 	var builder strings.Builder
-	for i, typ := range c.Types {
+	for i, typ := range *c.Types {
 		if typ, ok := typ.(*FunctionType); ok {
 			fmt.Fprintf(&builder, "typedef %s (*%s)(", CodegenType(typ.Returns, c.GlobalScope), cFuncTypeId(i, c.Filename))
 			if len(typ.Params) == 0 {
@@ -463,7 +463,7 @@ func CodegenStructDef(id string, fields []CheckedStructField, s *Scope) string {
 }
 
 func CodegenType(id TypeId, s *Scope) string {
-	t := s.File.Types[id]
+	t := (*s.File.Types)[id]
 	switch t := t.(type) {
 	case *BuildinType:
 		switch id {

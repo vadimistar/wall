@@ -25,7 +25,7 @@ func TestCheckImports(t *testing.T) {
 		},
 	}
 	fileA.Defs[0].(*wall.ParsedImport).File = fileB
-	checkedFileA := wall.NewCheckedFile("")
+	checkedFileA := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, wall.CheckImports(fileA, checkedFileA))
 	checkedFileB := checkedFileA.Imports[checkedFileA.GlobalScope.Imports["B"]].File
 	if assert.NotNil(t, checkedFileB) {
@@ -42,9 +42,9 @@ func TestCheckTypeSignatures(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
-	typ := checkedFile.Types[checkedFile.GlobalScope.Types["a"].TypeId]
+	typ := (*checkedFile.Types)[checkedFile.GlobalScope.Types["a"].TypeId]
 	assert.Equal(t, typ, wall.NewStructType())
 	assert.Equal(t, len(checkedFile.Structs), 1)
 }
@@ -71,14 +71,14 @@ func TestCheckFunctionSignatures(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: "A"}, wall.NewStructType()))
 	typeIdA := checkedFile.GlobalScope.Types["A"].TypeId
 	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: "B"}, wall.NewStructType()))
 	typeIdB := checkedFile.GlobalScope.Types["B"].TypeId
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	if fun, ok := checkedFile.GlobalScope.Funs["a"]; assert.Equal(t, ok, true) {
-		assert.Equal(t, checkedFile.Types[fun.TypeId], &wall.FunctionType{
+		assert.Equal(t, (*checkedFile.Types)[fun.TypeId], &wall.FunctionType{
 			Params: []wall.TypeId{
 				typeIdA,
 			},
@@ -86,7 +86,7 @@ func TestCheckFunctionSignatures(t *testing.T) {
 		})
 	}
 	if fun, ok := checkedFile.GlobalScope.Funs["b"]; assert.Equal(t, ok, true) {
-		assert.Equal(t, checkedFile.Types[fun.TypeId], &wall.FunctionType{
+		assert.Equal(t, (*checkedFile.Types)[fun.TypeId], &wall.FunctionType{
 			Params: []wall.TypeId{
 				typeIdA,
 			},
@@ -118,14 +118,14 @@ func TestCheckTypesContents(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: "String"}, wall.NewStructType()))
 	stringTypeId := checkedFile.GlobalScope.Types["String"].TypeId
 	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
 	employeeTypeId := checkedFile.GlobalScope.Types["Employee"].TypeId
-	if assert.IsType(t, wall.NewStructType(), checkedFile.Types[employeeTypeId]) {
-		emp := checkedFile.Types[employeeTypeId].(*wall.StructType)
+	if assert.IsType(t, wall.NewStructType(), (*checkedFile.Types)[employeeTypeId]) {
+		emp := (*checkedFile.Types)[employeeTypeId].(*wall.StructType)
 		assert.Equal(t, map[string]wall.TypeId{
 			"name": stringTypeId,
 			"age":  wall.INT_TYPE_ID,
@@ -250,7 +250,7 @@ func TestCheckBlocks(t *testing.T) {
 				},
 			},
 		}
-		checkedFile := wall.NewCheckedFile("")
+		checkedFile := wall.NewCheckedCompilationUnit("")
 		assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 		assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 	}
@@ -272,7 +272,7 @@ var checkStmtTests = []wall.ParsedStmt{
 
 func TestCheckStmt(t *testing.T) {
 	for _, test := range checkStmtTests {
-		checkedFile := wall.NewCheckedFile("")
+		checkedFile := wall.NewCheckedCompilationUnit("")
 		_, err := wall.CheckStmt(test, checkedFile.GlobalScope, &wall.MayReturn{Type: wall.UNIT_TYPE_ID})
 		assert.NoError(t, err)
 	}
@@ -566,7 +566,7 @@ var checkExprTests = []checkExprTest{
 
 func TestCheckExpr(t *testing.T) {
 	for _, test := range checkExprTests {
-		checkedFile := wall.NewCheckedFile("")
+		checkedFile := wall.NewCheckedCompilationUnit("")
 		expr, err := wall.CheckExpr(test.expr, checkedFile.GlobalScope)
 		if assert.NoError(t, err) {
 			assert.Equal(t, test.typeid, expr.TypeId())
@@ -575,7 +575,7 @@ func TestCheckExpr(t *testing.T) {
 }
 
 func TestCheckStringLiteralExpr(t *testing.T) {
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	expr, err := wall.CheckExpr(&wall.ParsedLiteralExpr{
 		Token: wall.Token{Kind: wall.STRING, Content: "\"ABC\""},
 	}, checkedFile.GlobalScope)
@@ -623,13 +623,13 @@ func TestCheckVarStmt(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 }
 
 func TestCheckWhileStmt(t *testing.T) {
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	got, err := wall.CheckStmt(&wall.ParsedWhile{
 		While: wall.Token{Kind: wall.WHILE},
 		Condition: &wall.ParsedLiteralExpr{
@@ -707,7 +707,7 @@ func TestCheckCallExpr(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 }
@@ -734,7 +734,7 @@ func TestCheckIdExpr(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
 	checkedFile.Funs[0].Name.Content = "c"
@@ -797,7 +797,7 @@ func TestCheckStructInitExpr(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
@@ -856,7 +856,7 @@ func TestCheckStructAccessExpr(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
@@ -864,7 +864,7 @@ func TestCheckStructAccessExpr(t *testing.T) {
 }
 
 func TestCheckAddressOp(t *testing.T) {
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	parsedExpr := &wall.ParsedUnaryExpr{
 		Operator: wall.Token{Kind: wall.AMP},
 		Operand: &wall.ParsedLiteralExpr{
@@ -889,7 +889,7 @@ func TestCheckAddressOp(t *testing.T) {
 }
 
 func TestCheckDerefOp(t *testing.T) {
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	parsedExpr := &wall.ParsedUnaryExpr{
 		Operator: wall.Token{Kind: wall.STAR},
 		Operand: &wall.ParsedIdExpr{
@@ -906,7 +906,7 @@ func TestCheckDerefOp(t *testing.T) {
 }
 
 func TestCheckAssignExpr(t *testing.T) {
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	parsedExpr := &wall.ParsedBinaryExpr{
 		Left: &wall.ParsedIdExpr{
 			Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
@@ -959,7 +959,7 @@ func TestCheckModuleAccessExpr(t *testing.T) {
 		},
 	}
 	fileA.Defs[0].(*wall.ParsedImport).File = fileB
-	checkedFileA := wall.NewCheckedFile("")
+	checkedFileA := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, wall.CheckImports(fileA, checkedFileA))
 	assert.NoError(t, wall.CheckFunctionSignatures(fileA, checkedFileA))
 	assert.NoError(t, wall.CheckBlocks(fileA, checkedFileA))
@@ -996,14 +996,14 @@ func TestCheckModuleAccessType(t *testing.T) {
 		},
 	}
 	fileA.Defs[0].(*wall.ParsedImport).File = fileB
-	checkedFileA := wall.NewCheckedFile("")
+	checkedFileA := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, wall.CheckImports(fileA, checkedFileA))
 	assert.NoError(t, wall.CheckTypeContents(fileA, checkedFileA))
 	assert.NoError(t, wall.CheckBlocks(fileA, checkedFileA))
 }
 
 func TestCheckAsExpr(t *testing.T) {
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	got, err := wall.CheckExpr(&wall.ParsedAsExpr{
 		Value: &wall.ParsedLiteralExpr{
 			Token: wall.Token{Kind: wall.INTEGER},
@@ -1036,7 +1036,7 @@ func TestCheckTypealiasDef(t *testing.T) {
 			},
 		},
 	}
-	checkedFile := wall.NewCheckedFile("")
+	checkedFile := wall.NewCheckedCompilationUnit("")
 	if assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile)) && assert.NoError(t, wall.CheckTypeContents(file, checkedFile)) {
 		assert.Equal(t, wall.INT_TYPE_ID, checkedFile.GlobalScope.Types["a"].TypeId)
 	}
