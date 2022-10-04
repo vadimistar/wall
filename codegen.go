@@ -471,7 +471,7 @@ func CodegenType(id TypeId, s *Scope) string {
 		case UNIT_TYPE_ID:
 			return "void"
 		case INT_TYPE_ID, BOOL_TYPE_ID:
-			return "int"
+			return "ptrdiff_t"
 		case INT8_TYPE_ID:
 			return "int8_t"
 		case INT16_TYPE_ID:
@@ -481,7 +481,7 @@ func CodegenType(id TypeId, s *Scope) string {
 		case INT64_TYPE_ID:
 			return "int64_t"
 		case UINT_TYPE_ID:
-			return "unsigned int"
+			return "size_t"
 		case UINT8_TYPE_ID:
 			return "uint8_t"
 		case UINT16_TYPE_ID:

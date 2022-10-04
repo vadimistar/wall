@@ -28,6 +28,8 @@ func main() {
 		fmt.Println("#include <stdlib.h>")
 		fmt.Println("#include <stdio.h>")
 		fmt.Println("#include <stdint.h>")
+		fmt.Println("#include <string.h>")
+		fmt.Println("#include <stddef.h>")
 	}
 	fmt.Println(cSource)
 }
