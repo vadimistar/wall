@@ -95,7 +95,7 @@ func resolveImport(def *ParsedImport, parsedModules map[string]*ParsedFile) (*Pa
 }
 
 func moduleToFilename(name string) string {
-	const WALL_EXTENSION = ".wl"
+	const WALL_EXTENSION = ".wall"
 	return name + WALL_EXTENSION
 }
 
