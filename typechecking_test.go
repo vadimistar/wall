@@ -11,7 +11,7 @@ func TestCheckImports(t *testing.T) {
 	fileA := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedImport{
-				Name: wall.Token{Content: []byte("B")},
+				Name: wall.Token{Content: "B"},
 				File: nil,
 			},
 		},
@@ -19,7 +19,7 @@ func TestCheckImports(t *testing.T) {
 	fileB := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedImport{
-				Name: wall.Token{Content: []byte("A")},
+				Name: wall.Token{Content: "A"},
 				File: fileA,
 			},
 		},
@@ -38,7 +38,7 @@ func TestCheckTypeSignatures(t *testing.T) {
 	file := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedStructDef{
-				Name: wall.Token{Content: []byte("a")},
+				Name: wall.Token{Content: "a"},
 			},
 		},
 	}
@@ -54,27 +54,27 @@ func TestCheckFunctionSignatures(t *testing.T) {
 		Defs: []wall.ParsedDef{
 			&wall.ParsedFunDef{
 				Fun: wall.Token{},
-				Id:  wall.Token{Content: []byte("a")},
+				Id:  wall.Token{Content: "a"},
 				Params: []wall.ParsedFunParam{{
-					Type: &wall.ParsedIdType{Token: wall.Token{Content: []byte("A")}},
+					Type: &wall.ParsedIdType{Token: wall.Token{Content: "A"}},
 				}},
-				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: []byte("B")}},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: "B"}},
 			},
 			&wall.ParsedExternFunDef{
 				Extern: wall.Token{},
 				Fun:    wall.Token{},
-				Name:   wall.Token{Content: []byte("b")},
+				Name:   wall.Token{Content: "b"},
 				Params: []wall.ParsedFunParam{{
-					Type: &wall.ParsedIdType{Token: wall.Token{Content: []byte("A")}},
+					Type: &wall.ParsedIdType{Token: wall.Token{Content: "A"}},
 				}},
-				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: []byte("B")}},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: "B"}},
 			},
 		},
 	}
 	checkedFile := wall.NewCheckedFile("")
-	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: []byte("A")}, wall.NewStructType()))
+	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: "A"}, wall.NewStructType()))
 	typeIdA := checkedFile.GlobalScope.Types["A"].TypeId
-	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: []byte("B")}, wall.NewStructType()))
+	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: "B"}, wall.NewStructType()))
 	typeIdB := checkedFile.GlobalScope.Types["B"].TypeId
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	if fun, ok := checkedFile.GlobalScope.Funs["a"]; assert.Equal(t, ok, true) {
@@ -100,18 +100,18 @@ func TestCheckTypesContents(t *testing.T) {
 	file := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedStructDef{
-				Name: wall.Token{Content: []byte("Employee")},
+				Name: wall.Token{Content: "Employee"},
 				Fields: []wall.ParsedStructField{
 					{
-						Name: wall.Token{Content: []byte("name")},
+						Name: wall.Token{Content: "name"},
 						Type: &wall.ParsedIdType{
-							Token: wall.Token{Content: []byte("String")},
+							Token: wall.Token{Content: "String"},
 						},
 					},
 					{
-						Name: wall.Token{Content: []byte("age")},
+						Name: wall.Token{Content: "age"},
 						Type: &wall.ParsedIdType{
-							Token: wall.Token{Content: []byte("int")},
+							Token: wall.Token{Content: "int"},
 						},
 					},
 				},
@@ -119,7 +119,7 @@ func TestCheckTypesContents(t *testing.T) {
 		},
 	}
 	checkedFile := wall.NewCheckedFile("")
-	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: []byte("String")}, wall.NewStructType()))
+	assert.NoError(t, checkedFile.GlobalScope.DefineType(&wall.Token{Content: "String"}, wall.NewStructType()))
 	stringTypeId := checkedFile.GlobalScope.Types["String"].TypeId
 	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
@@ -150,7 +150,7 @@ var checkBlocksTests = []checkBlocksTest{
 			Stmts: []wall.ParsedStmt{},
 		},
 		returnType: &wall.ParsedIdType{
-			Token: wall.Token{Content: []byte("()")},
+			Token: wall.Token{Content: "()"},
 		},
 	},
 	{
@@ -160,7 +160,7 @@ var checkBlocksTests = []checkBlocksTest{
 			},
 		},
 		returnType: &wall.ParsedIdType{
-			Token: wall.Token{Content: []byte("()")},
+			Token: wall.Token{Content: "()"},
 		},
 	},
 	{
@@ -168,13 +168,13 @@ var checkBlocksTests = []checkBlocksTest{
 			Stmts: []wall.ParsedStmt{
 				&wall.ParsedReturn{
 					Arg: &wall.ParsedLiteralExpr{
-						Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
+						Token: wall.Token{Kind: wall.INTEGER, Content: "10"},
 					},
 				},
 			},
 		},
 		returnType: &wall.ParsedIdType{
-			Token: wall.Token{Content: []byte("int32")},
+			Token: wall.Token{Content: "int32"},
 		},
 	},
 	{
@@ -188,7 +188,7 @@ var checkBlocksTests = []checkBlocksTest{
 			},
 		},
 		returnType: &wall.ParsedIdType{
-			Token: wall.Token{Content: []byte("bool")},
+			Token: wall.Token{Content: "bool"},
 		},
 	},
 	{
@@ -202,7 +202,7 @@ var checkBlocksTests = []checkBlocksTest{
 			},
 		},
 		returnType: &wall.ParsedIdType{
-			Token: wall.Token{Content: []byte("bool")},
+			Token: wall.Token{Content: "bool"},
 		},
 	},
 	{
@@ -211,13 +211,13 @@ var checkBlocksTests = []checkBlocksTest{
 				&wall.ParsedBlock{},
 				&wall.ParsedReturn{
 					Arg: &wall.ParsedLiteralExpr{
-						Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
+						Token: wall.Token{Kind: wall.INTEGER, Content: "10"},
 					},
 				},
 			},
 		},
 		returnType: &wall.ParsedIdType{
-			Token: wall.Token{Content: []byte("int32")},
+			Token: wall.Token{Content: "int32"},
 		},
 	},
 	{
@@ -227,14 +227,14 @@ var checkBlocksTests = []checkBlocksTest{
 				&wall.ParsedBlock{
 					Stmts: []wall.ParsedStmt{&wall.ParsedReturn{
 						Arg: &wall.ParsedLiteralExpr{
-							Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")},
+							Token: wall.Token{Kind: wall.INTEGER, Content: "10"},
 						},
 					}},
 				},
 			},
 		},
 		returnType: &wall.ParsedIdType{
-			Token: wall.Token{Content: []byte("int32")},
+			Token: wall.Token{Content: "int32"},
 		},
 	},
 }
@@ -244,7 +244,7 @@ func TestCheckBlocks(t *testing.T) {
 		file := &wall.ParsedFile{
 			Defs: []wall.ParsedDef{
 				&wall.ParsedFunDef{
-					Id:         wall.Token{Content: []byte("a")},
+					Id:         wall.Token{Content: "a"},
 					Body:       test.block,
 					ReturnType: test.returnType,
 				},
@@ -258,14 +258,14 @@ func TestCheckBlocks(t *testing.T) {
 
 var checkStmtTests = []wall.ParsedStmt{
 	&wall.ParsedVar{
-		Id: wall.Token{Content: []byte("")},
+		Id: wall.Token{Content: ""},
 		Value: &wall.ParsedLiteralExpr{
-			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 		},
 	},
 	&wall.ParsedExprStmt{
 		Expr: &wall.ParsedLiteralExpr{
-			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 		},
 	},
 }
@@ -286,20 +286,20 @@ type checkExprTest struct {
 var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedLiteralExpr{
-			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 		},
 		typeid: wall.INT32_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedLiteralExpr{
-			Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0.0")},
+			Token: wall.Token{Kind: wall.FLOAT, Content: "0.0"},
 		},
 		typeid: wall.FLOAT64_TYPE_ID,
 	},
 	{
 		expr: &wall.ParsedGroupedExpr{
 			Inner: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.FLOAT64_TYPE_ID,
@@ -308,7 +308,7 @@ var checkExprTests = []checkExprTest{
 		expr: &wall.ParsedUnaryExpr{
 			Operator: wall.Token{Kind: wall.MINUS},
 			Operand: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.INT32_TYPE_ID,
@@ -317,7 +317,7 @@ var checkExprTests = []checkExprTest{
 		expr: &wall.ParsedUnaryExpr{
 			Operator: wall.Token{Kind: wall.MINUS},
 			Operand: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.FLOAT64_TYPE_ID,
@@ -325,11 +325,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.PLUS},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.INT32_TYPE_ID,
@@ -337,11 +337,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.MINUS},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.INT32_TYPE_ID,
@@ -349,11 +349,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.STAR},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.INT32_TYPE_ID,
@@ -361,11 +361,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.SLASH},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.INT32_TYPE_ID,
@@ -373,11 +373,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.EQEQ},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -385,11 +385,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.BANGEQ},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -397,11 +397,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.LT},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -409,11 +409,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.LTEQ},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -421,11 +421,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.GT},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -433,11 +433,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.GTEQ},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -445,11 +445,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.PLUS},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.FLOAT64_TYPE_ID,
@@ -457,11 +457,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.MINUS},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.FLOAT64_TYPE_ID,
@@ -469,11 +469,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.STAR},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.FLOAT64_TYPE_ID,
@@ -481,11 +481,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.SLASH},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.FLOAT64_TYPE_ID,
@@ -493,11 +493,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.EQEQ},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -505,11 +505,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.BANGEQ},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -517,11 +517,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.LT},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -529,11 +529,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.LTEQ},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -541,11 +541,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.GT},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -553,11 +553,11 @@ var checkExprTests = []checkExprTest{
 	{
 		expr: &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 			Op: wall.Token{Kind: wall.GTEQ},
 			Right: &wall.ParsedLiteralExpr{
-				Token: wall.Token{Kind: wall.FLOAT, Content: []byte("0")},
+				Token: wall.Token{Kind: wall.FLOAT, Content: "0"},
 			},
 		},
 		typeid: wall.BOOL_TYPE_ID,
@@ -577,7 +577,7 @@ func TestCheckExpr(t *testing.T) {
 func TestCheckStringLiteralExpr(t *testing.T) {
 	checkedFile := wall.NewCheckedFile("")
 	expr, err := wall.CheckExpr(&wall.ParsedLiteralExpr{
-		Token: wall.Token{Kind: wall.STRING, Content: []byte("\"ABC\"")},
+		Token: wall.Token{Kind: wall.STRING, Content: "\"ABC\""},
 	}, checkedFile.GlobalScope)
 	if assert.NoError(t, err) {
 		assert.Equal(t, checkedFile.TypeId(&wall.PointerType{
@@ -590,35 +590,35 @@ func TestCheckVarStmt(t *testing.T) {
 	file := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedFunDef{
-				Id: wall.Token{Content: []byte("")},
+				Id: wall.Token{Content: ""},
 				Body: &wall.ParsedBlock{
 					Stmts: []wall.ParsedStmt{
 						&wall.ParsedVar{
-							Id: wall.Token{Content: []byte("a")},
+							Id: wall.Token{Content: "a"},
 							Value: &wall.ParsedLiteralExpr{
-								Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+								Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 							},
 						},
 						&wall.ParsedReturn{
 							Arg: &wall.ParsedIdExpr{
-								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+								Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 							},
 						},
 						&wall.ParsedVar{
-							Id: wall.Token{Content: []byte("b")},
+							Id: wall.Token{Content: "b"},
 							Type: &wall.ParsedIdType{
-								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int32")},
+								Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int32"},
 							},
 						},
 						&wall.ParsedReturn{
 							Arg: &wall.ParsedIdExpr{
-								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+								Token: wall.Token{Kind: wall.IDENTIFIER, Content: "b"},
 							},
 						},
 					},
 				},
 				ReturnType: &wall.ParsedIdType{
-					Token: wall.Token{Content: []byte("int32")},
+					Token: wall.Token{Content: "int32"},
 				},
 			},
 		},
@@ -664,23 +664,23 @@ func TestCheckCallExpr(t *testing.T) {
 	file := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedFunDef{
-				Id: wall.Token{Content: []byte("sum")},
+				Id: wall.Token{Content: "sum"},
 				Params: []wall.ParsedFunParam{
 					{
-						Id: wall.Token{Content: []byte("a")},
+						Id: wall.Token{Content: "a"},
 						Type: &wall.ParsedIdType{
-							Token: wall.Token{Content: []byte("int32")},
+							Token: wall.Token{Content: "int32"},
 						},
 					},
 					{
-						Id: wall.Token{Content: []byte("b")},
+						Id: wall.Token{Content: "b"},
 						Type: &wall.ParsedIdType{
-							Token: wall.Token{Content: []byte("int32")},
+							Token: wall.Token{Content: "int32"},
 						},
 					},
 				},
-				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: []byte("int32")}},
-				Body:       &wall.ParsedBlock{Stmts: []wall.ParsedStmt{&wall.ParsedReturn{Arg: &wall.ParsedLiteralExpr{Token: wall.Token{Kind: wall.INTEGER, Content: []byte("10")}}}}},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Content: "int32"}},
+				Body:       &wall.ParsedBlock{Stmts: []wall.ParsedStmt{&wall.ParsedReturn{Arg: &wall.ParsedLiteralExpr{Token: wall.Token{Kind: wall.INTEGER, Content: "10"}}}}},
 			},
 			&wall.ParsedFunDef{
 				Params:     []wall.ParsedFunParam{},
@@ -690,14 +690,14 @@ func TestCheckCallExpr(t *testing.T) {
 						&wall.ParsedExprStmt{
 							Expr: &wall.ParsedCallExpr{
 								Callee: &wall.ParsedIdExpr{
-									Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+									Token: wall.Token{Kind: wall.IDENTIFIER, Content: "sum"},
 								},
 								Args: []wall.ParsedExpr{
 									&wall.ParsedLiteralExpr{
-										Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+										Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 									},
 									&wall.ParsedLiteralExpr{
-										Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+										Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 									},
 								},
 							},
@@ -716,17 +716,17 @@ func TestCheckIdExpr(t *testing.T) {
 	file := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedFunDef{
-				Id:     wall.Token{Content: []byte("a")},
+				Id:     wall.Token{Content: "a"},
 				Params: []wall.ParsedFunParam{},
 				Body:   &wall.ParsedBlock{},
 			},
 			&wall.ParsedFunDef{
-				Id: wall.Token{Content: []byte("b")},
+				Id: wall.Token{Content: "b"},
 				Body: &wall.ParsedBlock{
 					Stmts: []wall.ParsedStmt{
 						&wall.ParsedExprStmt{
 							Expr: &wall.ParsedIdExpr{
-								Token: wall.Token{Content: []byte("a")},
+								Token: wall.Token{Content: "a"},
 							},
 						},
 					},
@@ -737,7 +737,7 @@ func TestCheckIdExpr(t *testing.T) {
 	checkedFile := wall.NewCheckedFile("")
 	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
 	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
-	checkedFile.Funs[0].Name.Content = []byte("c")
+	checkedFile.Funs[0].Name.Content = "c"
 	assert.Equal(t, &wall.CheckedExprStmt{
 		Expr: &wall.CheckedIdExpr{
 			Id: checkedFile.Funs[0].Name,
@@ -753,38 +753,38 @@ func TestCheckStructInitExpr(t *testing.T) {
 	file := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedStructDef{
-				Name: wall.Token{Content: []byte("Point")},
+				Name: wall.Token{Content: "Point"},
 				Fields: []wall.ParsedStructField{
 					{
-						Name: wall.Token{Content: []byte("x")},
+						Name: wall.Token{Content: "x"},
 						Type: &wall.ParsedIdType{
-							Token: wall.Token{Content: []byte("int32")},
+							Token: wall.Token{Content: "int32"},
 						},
 					},
 					{
-						Name: wall.Token{Content: []byte("y")},
+						Name: wall.Token{Content: "y"},
 						Type: &wall.ParsedIdType{
-							Token: wall.Token{Content: []byte("float64")},
+							Token: wall.Token{Content: "float64"},
 						},
 					},
 				},
 			},
 			&wall.ParsedFunDef{
-				Id: wall.Token{Content: []byte("a")},
+				Id: wall.Token{Content: "a"},
 				Body: &wall.ParsedBlock{
 					Stmts: []wall.ParsedStmt{
 						&wall.ParsedExprStmt{
 							Expr: &wall.ParsedStructInitExpr{
-								Name: wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("Point")}},
+								Name: wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "Point"}},
 								Fields: []wall.ParsedStructInitField{
 									{
-										Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("x")},
+										Name: wall.Token{Kind: wall.IDENTIFIER, Content: "x"},
 										Value: &wall.ParsedLiteralExpr{
 											Token: wall.Token{Kind: wall.INTEGER},
 										},
 									},
 									{
-										Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("y")},
+										Name: wall.Token{Kind: wall.IDENTIFIER, Content: "y"},
 										Value: &wall.ParsedLiteralExpr{
 											Token: wall.Token{Kind: wall.FLOAT},
 										},
@@ -808,46 +808,46 @@ func TestCheckStructAccessExpr(t *testing.T) {
 	file := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedStructDef{
-				Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("Point")},
+				Name: wall.Token{Kind: wall.IDENTIFIER, Content: "Point"},
 				Fields: []wall.ParsedStructField{
 					{
-						Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("x")},
-						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int32")}},
+						Name: wall.Token{Kind: wall.IDENTIFIER, Content: "x"},
+						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int32"}},
 					},
 					{
-						Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("y")},
-						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int32")}},
+						Name: wall.Token{Kind: wall.IDENTIFIER, Content: "y"},
+						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int32"}},
 					},
 				},
 			},
 			&wall.ParsedFunDef{
-				Id:         wall.Token{Kind: wall.IDENTIFIER, Content: []byte("main")},
+				Id:         wall.Token{Kind: wall.IDENTIFIER, Content: "main"},
 				Params:     []wall.ParsedFunParam{},
-				ReturnType: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int32")}},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int32"}},
 				Body: &wall.ParsedBlock{
 					Left: wall.Token{Kind: wall.LEFTBRACE},
 					Stmts: []wall.ParsedStmt{
 						&wall.ParsedVar{
-							Id:    wall.Token{Kind: wall.IDENTIFIER, Content: []byte("p")},
-							Type:  &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("Point")}},
+							Id:    wall.Token{Kind: wall.IDENTIFIER, Content: "p"},
+							Type:  &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "Point"}},
 							Value: nil,
 						},
 						&wall.ParsedExprStmt{
 							Expr: &wall.ParsedObjectAccessExpr{
 								Object: &wall.ParsedIdExpr{
-									Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("p")},
+									Token: wall.Token{Kind: wall.IDENTIFIER, Content: "p"},
 								},
 								Dot:    wall.Token{Kind: wall.DOT},
-								Member: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("x")},
+								Member: wall.Token{Kind: wall.IDENTIFIER, Content: "x"},
 							},
 						},
 						&wall.ParsedReturn{
 							Arg: &wall.ParsedObjectAccessExpr{
 								Object: &wall.ParsedIdExpr{
-									Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("p")},
+									Token: wall.Token{Kind: wall.IDENTIFIER, Content: "p"},
 								},
 								Dot:    wall.Token{Kind: wall.DOT},
-								Member: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("y")},
+								Member: wall.Token{Kind: wall.IDENTIFIER, Content: "y"},
 							},
 						},
 					},
@@ -868,7 +868,7 @@ func TestCheckAddressOp(t *testing.T) {
 	parsedExpr := &wall.ParsedUnaryExpr{
 		Operator: wall.Token{Kind: wall.AMP},
 		Operand: &wall.ParsedLiteralExpr{
-			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 		},
 	}
 	_, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
@@ -876,10 +876,10 @@ func TestCheckAddressOp(t *testing.T) {
 	parsedExpr = &wall.ParsedUnaryExpr{
 		Operator: wall.Token{Kind: wall.AMP},
 		Operand: &wall.ParsedIdExpr{
-			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 		},
 	}
-	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")}, wall.INT_TYPE_ID)
+	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: "a"}, wall.INT_TYPE_ID)
 	checkedExpr, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
 	if assert.NoError(t, err) {
 		assert.Equal(t, checkedExpr.TypeId(), checkedFile.TypeId(&wall.PointerType{
@@ -893,10 +893,10 @@ func TestCheckDerefOp(t *testing.T) {
 	parsedExpr := &wall.ParsedUnaryExpr{
 		Operator: wall.Token{Kind: wall.STAR},
 		Operand: &wall.ParsedIdExpr{
-			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 		},
 	}
-	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")}, checkedFile.TypeId(&wall.PointerType{
+	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: "a"}, checkedFile.TypeId(&wall.PointerType{
 		Type: wall.INT_TYPE_ID,
 	}))
 	checkedExpr, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
@@ -909,14 +909,14 @@ func TestCheckAssignExpr(t *testing.T) {
 	checkedFile := wall.NewCheckedFile("")
 	parsedExpr := &wall.ParsedBinaryExpr{
 		Left: &wall.ParsedIdExpr{
-			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 		},
 		Op: wall.Token{Kind: wall.EQ},
 		Right: &wall.ParsedLiteralExpr{
-			Token: wall.Token{Kind: wall.INTEGER, Content: []byte("0")},
+			Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 		},
 	}
-	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")}, wall.INT32_TYPE_ID)
+	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: "a"}, wall.INT32_TYPE_ID)
 	checkedExpr, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
 	if assert.NoError(t, err) {
 		assert.Equal(t, checkedExpr.TypeId(), wall.INT32_TYPE_ID)
@@ -927,18 +927,18 @@ func TestCheckModuleAccessExpr(t *testing.T) {
 	fileA := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedImport{
-				Name: wall.Token{Content: []byte("B")},
+				Name: wall.Token{Content: "B"},
 				File: nil,
 			},
 			&wall.ParsedFunDef{
-				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 				Body: &wall.ParsedBlock{
 					Stmts: []wall.ParsedStmt{
 						&wall.ParsedExprStmt{
 							Expr: &wall.ParsedCallExpr{
 								Callee: &wall.ParsedModuleAccessExpr{
-									Module: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("B")},
-									Member: &wall.ParsedIdExpr{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")}},
+									Module: wall.Token{Kind: wall.IDENTIFIER, Content: "B"},
+									Member: &wall.ParsedIdExpr{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "b"}},
 								},
 								Args: []wall.ParsedExpr{},
 							},
@@ -951,7 +951,7 @@ func TestCheckModuleAccessExpr(t *testing.T) {
 	fileB := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedFunDef{
-				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: "b"},
 				Body: &wall.ParsedBlock{
 					Stmts: []wall.ParsedStmt{},
 				},
@@ -969,17 +969,17 @@ func TestCheckModuleAccessType(t *testing.T) {
 	fileA := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedImport{
-				Name: wall.Token{Content: []byte("B")},
+				Name: wall.Token{Content: "B"},
 				File: nil,
 			},
 			&wall.ParsedFunDef{
-				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 				Body: &wall.ParsedBlock{
 					Stmts: []wall.ParsedStmt{
 						&wall.ParsedVar{
-							Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("v")},
+							Id: wall.Token{Kind: wall.IDENTIFIER, Content: "v"},
 							Type: &wall.ParsedIdType{
-								Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("A")},
+								Token: wall.Token{Kind: wall.IDENTIFIER, Content: "A"},
 							},
 						},
 					},
@@ -990,7 +990,7 @@ func TestCheckModuleAccessType(t *testing.T) {
 	fileB := &wall.ParsedFile{
 		Defs: []wall.ParsedDef{
 			&wall.ParsedStructDef{
-				Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("A")},
+				Name:   wall.Token{Kind: wall.IDENTIFIER, Content: "A"},
 				Fields: []wall.ParsedStructField{},
 			},
 		},
@@ -1010,7 +1010,7 @@ func TestCheckAsExpr(t *testing.T) {
 		},
 		As: wall.Token{Kind: wall.AS},
 		Type: &wall.ParsedIdType{
-			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("float64")},
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: "float64"},
 		},
 	}, checkedFile.GlobalScope)
 	if assert.NoError(t, err) {
@@ -1029,9 +1029,9 @@ func TestCheckTypealiasDef(t *testing.T) {
 		Defs: []wall.ParsedDef{
 			&wall.ParsedTypealiasDef{
 				Typealias: wall.Token{Kind: wall.TYPEALIAS},
-				Name:      wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Name:      wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 				Type: &wall.ParsedIdType{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 				},
 			},
 		},

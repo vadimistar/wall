@@ -16,28 +16,28 @@ type parseLiteralExprTest struct {
 
 var parseLiteralExprTests = []parseLiteralExprTest{
 	{[]wall.Token{
-		{Kind: wall.IDENTIFIER, Content: []byte("abc")},
+		{Kind: wall.IDENTIFIER, Content: "abc"},
 		{Kind: wall.EOF},
 	}, &wall.ParsedIdExpr{
-		Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("abc")},
+		Token: wall.Token{Kind: wall.IDENTIFIER, Content: "abc"},
 	}},
 	{[]wall.Token{
-		{Kind: wall.INTEGER, Content: []byte("123")},
+		{Kind: wall.INTEGER, Content: "123"},
 		{Kind: wall.EOF},
 	}, &wall.ParsedLiteralExpr{
-		Token: wall.Token{Kind: wall.INTEGER, Content: []byte("123")},
+		Token: wall.Token{Kind: wall.INTEGER, Content: "123"},
 	}},
 	{[]wall.Token{
-		{Kind: wall.FLOAT, Content: []byte("1.0")},
+		{Kind: wall.FLOAT, Content: "1.0"},
 		{Kind: wall.EOF},
 	}, &wall.ParsedLiteralExpr{
-		Token: wall.Token{Kind: wall.FLOAT, Content: []byte("1.0")},
+		Token: wall.Token{Kind: wall.FLOAT, Content: "1.0"},
 	}},
 	{[]wall.Token{
-		{Kind: wall.STRING, Content: []byte("ABC")},
+		{Kind: wall.STRING, Content: "ABC"},
 		{Kind: wall.EOF},
 	}, &wall.ParsedLiteralExpr{
-		Token: wall.Token{Kind: wall.STRING, Content: []byte("ABC")},
+		Token: wall.Token{Kind: wall.STRING, Content: "ABC"},
 	}},
 }
 
@@ -84,22 +84,22 @@ var binaryOps = []wall.Token{
 func TestParseBinaryExpr(t *testing.T) {
 	for _, op := range binaryOps {
 		t.Logf("testing %s", op.Kind)
-		pr := wall.NewParser([]wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("a")}, op, {Kind: wall.IDENTIFIER, Content: []byte("b")}, op, {Kind: wall.IDENTIFIER, Content: []byte("c")}, {Kind: wall.EOF}})
+		pr := wall.NewParser([]wall.Token{{Kind: wall.IDENTIFIER, Content: "a"}, op, {Kind: wall.IDENTIFIER, Content: "b"}, op, {Kind: wall.IDENTIFIER, Content: "c"}, {Kind: wall.EOF}})
 		res, err := pr.ParseExprAndEof()
 		assert.NoError(t, err)
 		if wall.IsRightAssoc(op.Kind) {
 			expected := &wall.ParsedBinaryExpr{
 				Left: &wall.ParsedIdExpr{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 				},
 				Op: op,
 				Right: &wall.ParsedBinaryExpr{
 					Left: &wall.ParsedIdExpr{
-						Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+						Token: wall.Token{Kind: wall.IDENTIFIER, Content: "b"},
 					},
 					Op: op,
 					Right: &wall.ParsedIdExpr{
-						Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("c")},
+						Token: wall.Token{Kind: wall.IDENTIFIER, Content: "c"},
 					},
 				},
 			}
@@ -109,16 +109,16 @@ func TestParseBinaryExpr(t *testing.T) {
 		expected := &wall.ParsedBinaryExpr{
 			Left: &wall.ParsedBinaryExpr{
 				Left: &wall.ParsedIdExpr{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 				},
 				Op: op,
 				Right: &wall.ParsedIdExpr{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "b"},
 				},
 			},
 			Op: op,
 			Right: &wall.ParsedIdExpr{
-				Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("c")},
+				Token: wall.Token{Kind: wall.IDENTIFIER, Content: "c"},
 			},
 		}
 		assert.Equal(t, res, expected)
@@ -214,19 +214,19 @@ type parseStructInitExprTest struct {
 
 var parseStructInitExprTests = []parseStructInitExprTest{
 	{
-		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("Bob")}, {Kind: wall.LEFTBRACE}, {Kind: wall.RIGHTBRACE}},
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: "Bob"}, {Kind: wall.LEFTBRACE}, {Kind: wall.RIGHTBRACE}},
 		expected: &wall.ParsedStructInitExpr{
 			Name:   wall.ParsedIdType{},
 			Fields: []wall.ParsedStructInitField{},
 		},
 	},
 	{
-		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("Bob")}, {Kind: wall.LEFTBRACE}, {Kind: wall.IDENTIFIER, Content: []byte("age")}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTBRACE}},
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: "Bob"}, {Kind: wall.LEFTBRACE}, {Kind: wall.IDENTIFIER, Content: "age"}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTBRACE}},
 		expected: &wall.ParsedStructInitExpr{
 			Name: wall.ParsedIdType{},
 			Fields: []wall.ParsedStructInitField{
 				{
-					Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("age")},
+					Name: wall.Token{Kind: wall.IDENTIFIER, Content: "age"},
 					Value: &wall.ParsedLiteralExpr{
 						Token: wall.Token{Kind: wall.INTEGER},
 					},
@@ -235,12 +235,12 @@ var parseStructInitExprTests = []parseStructInitExprTest{
 		},
 	},
 	{
-		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("Bob")}, {Kind: wall.LEFTBRACE}, {Kind: wall.IDENTIFIER, Content: []byte("age")}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTBRACE}},
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: "Bob"}, {Kind: wall.LEFTBRACE}, {Kind: wall.IDENTIFIER, Content: "age"}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTBRACE}},
 		expected: &wall.ParsedStructInitExpr{
 			Name: wall.ParsedIdType{},
 			Fields: []wall.ParsedStructInitField{
 				{
-					Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("age")},
+					Name: wall.Token{Kind: wall.IDENTIFIER, Content: "age"},
 					Value: &wall.ParsedLiteralExpr{
 						Token: wall.Token{Kind: wall.INTEGER},
 					},
@@ -249,12 +249,12 @@ var parseStructInitExprTests = []parseStructInitExprTest{
 		},
 	},
 	{
-		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("Bob")}, {Kind: wall.LEFTBRACE}, {Kind: wall.NEWLINE}, {Kind: wall.IDENTIFIER, Content: []byte("age")}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.COMMA}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE}},
+		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: "Bob"}, {Kind: wall.LEFTBRACE}, {Kind: wall.NEWLINE}, {Kind: wall.IDENTIFIER, Content: "age"}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.COMMA}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE}},
 		expected: &wall.ParsedStructInitExpr{
 			Name: wall.ParsedIdType{},
 			Fields: []wall.ParsedStructInitField{
 				{
-					Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("age")},
+					Name: wall.Token{Kind: wall.IDENTIFIER, Content: "age"},
 					Value: &wall.ParsedLiteralExpr{
 						Token: wall.Token{Kind: wall.INTEGER},
 					},
@@ -419,36 +419,36 @@ type parseFunDefTest struct {
 var parseFunDefTests = []parseFunDefTest{
 	{[]wall.Token{
 		{Kind: wall.FUN},
-		{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		{Kind: wall.IDENTIFIER, Content: "sum"},
 		{Kind: wall.LEFTPAREN},
-		{Kind: wall.IDENTIFIER, Content: []byte("a")},
-		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.IDENTIFIER, Content: "a"},
+		{Kind: wall.IDENTIFIER, Content: "int"},
 		{Kind: wall.COMMA},
-		{Kind: wall.IDENTIFIER, Content: []byte("b")},
-		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.IDENTIFIER, Content: "b"},
+		{Kind: wall.IDENTIFIER, Content: "int"},
 		{Kind: wall.RIGHTPAREN},
-		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.IDENTIFIER, Content: "int"},
 		{Kind: wall.LEFTBRACE},
 		{Kind: wall.RIGHTBRACE},
 	}, &wall.ParsedFunDef{
 		Fun: wall.Token{Kind: wall.FUN},
-		Id:  wall.Token{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		Id:  wall.Token{Kind: wall.IDENTIFIER, Content: "sum"},
 		Params: []wall.ParsedFunParam{
 			{
-				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 				Type: &wall.ParsedIdType{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 				},
 			},
 			{
-				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: "b"},
 				Type: &wall.ParsedIdType{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 				},
 			},
 		},
 		ReturnType: &wall.ParsedIdType{
-			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 		},
 		Body: &wall.ParsedBlock{
 			Left:  wall.Token{Kind: wall.LEFTBRACE},
@@ -458,30 +458,30 @@ var parseFunDefTests = []parseFunDefTest{
 	}},
 	{[]wall.Token{
 		{Kind: wall.FUN},
-		{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		{Kind: wall.IDENTIFIER, Content: "sum"},
 		{Kind: wall.LEFTPAREN},
-		{Kind: wall.IDENTIFIER, Content: []byte("a")},
-		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.IDENTIFIER, Content: "a"},
+		{Kind: wall.IDENTIFIER, Content: "int"},
 		{Kind: wall.COMMA},
-		{Kind: wall.IDENTIFIER, Content: []byte("b")},
-		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.IDENTIFIER, Content: "b"},
+		{Kind: wall.IDENTIFIER, Content: "int"},
 		{Kind: wall.RIGHTPAREN},
 		{Kind: wall.LEFTBRACE},
 		{Kind: wall.RIGHTBRACE},
 	}, &wall.ParsedFunDef{
 		Fun: wall.Token{Kind: wall.FUN},
-		Id:  wall.Token{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		Id:  wall.Token{Kind: wall.IDENTIFIER, Content: "sum"},
 		Params: []wall.ParsedFunParam{
 			{
-				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 				Type: &wall.ParsedIdType{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 				},
 			},
 			{
-				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: "b"},
 				Type: &wall.ParsedIdType{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 				},
 			},
 		},
@@ -494,14 +494,14 @@ var parseFunDefTests = []parseFunDefTest{
 	}},
 	{[]wall.Token{
 		{Kind: wall.FUN},
-		{Kind: wall.IDENTIFIER, Content: []byte("main")},
+		{Kind: wall.IDENTIFIER, Content: "main"},
 		{Kind: wall.LEFTPAREN},
 		{Kind: wall.RIGHTPAREN},
 		{Kind: wall.LEFTBRACE},
 		{Kind: wall.RIGHTBRACE},
 	}, &wall.ParsedFunDef{
 		Fun:        wall.Token{Kind: wall.FUN},
-		Id:         wall.Token{Kind: wall.IDENTIFIER, Content: []byte("main")},
+		Id:         wall.Token{Kind: wall.IDENTIFIER, Content: "main"},
 		Params:     []wall.ParsedFunParam{},
 		ReturnType: nil,
 		Body: &wall.ParsedBlock{
@@ -530,36 +530,36 @@ var parseExternFunDefTests = []parseExternFunDefTest{
 	{[]wall.Token{
 		{Kind: wall.EXTERN},
 		{Kind: wall.FUN},
-		{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		{Kind: wall.IDENTIFIER, Content: "sum"},
 		{Kind: wall.LEFTPAREN},
-		{Kind: wall.IDENTIFIER, Content: []byte("a")},
-		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.IDENTIFIER, Content: "a"},
+		{Kind: wall.IDENTIFIER, Content: "int"},
 		{Kind: wall.COMMA},
-		{Kind: wall.IDENTIFIER, Content: []byte("b")},
-		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.IDENTIFIER, Content: "b"},
+		{Kind: wall.IDENTIFIER, Content: "int"},
 		{Kind: wall.RIGHTPAREN},
-		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.IDENTIFIER, Content: "int"},
 		{Kind: wall.EOF},
 	}, &wall.ParsedExternFunDef{
 		Extern: wall.Token{Kind: wall.EXTERN},
 		Fun:    wall.Token{Kind: wall.FUN},
-		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("sum")},
+		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: "sum"},
 		Params: []wall.ParsedFunParam{
 			{
-				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 				Type: &wall.ParsedIdType{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 				},
 			},
 			{
-				Id: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+				Id: wall.Token{Kind: wall.IDENTIFIER, Content: "b"},
 				Type: &wall.ParsedIdType{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 				},
 			},
 		},
 		ReturnType: &wall.ParsedIdType{
-			Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 		},
 	}},
 }
@@ -577,13 +577,13 @@ func TestParseExternFunDef(t *testing.T) {
 func TestParseImportDef(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{
 		{Kind: wall.IMPORT},
-		{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		{Kind: wall.IDENTIFIER, Content: "a"},
 	})
 	got, err := pr.ParseDefAndEof()
 	assert.NoError(t, err)
 	expected := &wall.ParsedImport{
 		Import: wall.Token{Kind: wall.IMPORT},
-		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 	}
 	assert.Equal(t, got, expected)
 }
@@ -591,13 +591,13 @@ func TestParseImportDef(t *testing.T) {
 func TestParseStructDef(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{
 		{Kind: wall.STRUCT},
-		{Kind: wall.IDENTIFIER, Content: []byte("Employee")},
+		{Kind: wall.IDENTIFIER, Content: "Employee"},
 		{Kind: wall.LEFTBRACE},
-		{Kind: wall.IDENTIFIER, Content: []byte("id")},
-		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.IDENTIFIER, Content: "id"},
+		{Kind: wall.IDENTIFIER, Content: "int"},
 		{Kind: wall.COMMA},
-		{Kind: wall.IDENTIFIER, Content: []byte("age")},
-		{Kind: wall.IDENTIFIER, Content: []byte("int")},
+		{Kind: wall.IDENTIFIER, Content: "age"},
+		{Kind: wall.IDENTIFIER, Content: "int"},
 		{Kind: wall.NEWLINE},
 		{Kind: wall.RIGHTBRACE},
 	})
@@ -605,18 +605,18 @@ func TestParseStructDef(t *testing.T) {
 	assert.NoError(t, err)
 	expected := &wall.ParsedStructDef{
 		Struct: wall.Token{Kind: wall.STRUCT},
-		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("Employee")},
+		Name:   wall.Token{Kind: wall.IDENTIFIER, Content: "Employee"},
 		Fields: []wall.ParsedStructField{
 			{
-				Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("id")},
+				Name: wall.Token{Kind: wall.IDENTIFIER, Content: "id"},
 				Type: &wall.ParsedIdType{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 				},
 			},
 			{
-				Name: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("age")},
+				Name: wall.Token{Kind: wall.IDENTIFIER, Content: "age"},
 				Type: &wall.ParsedIdType{
-					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int"},
 				},
 			},
 		},
@@ -627,7 +627,7 @@ func TestParseStructDef(t *testing.T) {
 func TestParseFile(t *testing.T) {
 	tokens := []wall.Token{
 		{Kind: wall.IMPORT},
-		{Kind: wall.IDENTIFIER, Content: []byte("a")},
+		{Kind: wall.IDENTIFIER, Content: "a"},
 		{Kind: wall.NEWLINE},
 	}
 	tokens = append(tokens, parseFunDefTests[0].tokens...)
@@ -639,7 +639,7 @@ func TestParseFile(t *testing.T) {
 		Defs: []wall.ParsedDef{
 			&wall.ParsedImport{
 				Import: wall.Token{Kind: wall.IMPORT},
-				Name:   wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Name:   wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 			},
 			parseFunDefTests[0].expected,
 		},
@@ -657,7 +657,7 @@ func TestParseCompilationUnit(t *testing.T) {
 	if err := os.WriteFile("C.wl", []byte("import A\nfun c() {}\n"), 0666); err != nil {
 		t.Fatal(err)
 	}
-	A, err := wall.ParseCompilationUnit("A.wl", []byte("import B\nfun a() {}\n"))
+	A, err := wall.ParseCompilationUnit("A.wl", "import B\nfun a() {}\n")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -673,27 +673,27 @@ func TestParseCompilationUnit(t *testing.T) {
 }
 
 func TestParseObjectAccessExpr(t *testing.T) {
-	pr := wall.NewParser([]wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("a")}, {Kind: wall.DOT}, {Kind: wall.IDENTIFIER, Content: []byte("b")}})
+	pr := wall.NewParser([]wall.Token{{Kind: wall.IDENTIFIER, Content: "a"}, {Kind: wall.DOT}, {Kind: wall.IDENTIFIER, Content: "b"}})
 	got, err := pr.ParseExprAndEof()
 	if assert.NoError(t, err) {
 		assert.Equal(t, &wall.ParsedObjectAccessExpr{
 			Object: &wall.ParsedIdExpr{
-				Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 			},
 			Dot:    wall.Token{Kind: wall.DOT},
-			Member: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")},
+			Member: wall.Token{Kind: wall.IDENTIFIER, Content: "b"},
 		}, got)
 	}
 }
 
 func TestParseModuleAccessExpr(t *testing.T) {
-	pr := wall.NewParser([]wall.Token{{Kind: wall.IDENTIFIER, Content: []byte("a")}, {Kind: wall.COLONCOLON}, {Kind: wall.IDENTIFIER, Content: []byte("b")}})
+	pr := wall.NewParser([]wall.Token{{Kind: wall.IDENTIFIER, Content: "a"}, {Kind: wall.COLONCOLON}, {Kind: wall.IDENTIFIER, Content: "b"}})
 	got, err := pr.ParseExprAndEof()
 	if assert.NoError(t, err) {
 		assert.Equal(t, &wall.ParsedModuleAccessExpr{
-			Module:     wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+			Module:     wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 			Coloncolon: wall.Token{Kind: wall.COLONCOLON},
-			Member:     &wall.ParsedIdExpr{Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("b")}},
+			Member:     &wall.ParsedIdExpr{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "b"}},
 		}, got)
 	}
 }

@@ -34,7 +34,7 @@ func lowerExternFunctions(c *CheckedFile, checked map[*CheckedFile]struct{}) {
 					&CheckedLiteralExpr{
 						Literal: Token{
 							Kind:    STRING,
-							Content: []byte(inlineCText),
+							Content: inlineCText,
 						},
 						Type: c.TypeId(&PointerType{
 							Type: CHAR_TYPE_ID,

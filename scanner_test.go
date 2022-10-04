@@ -8,55 +8,55 @@ import (
 )
 
 type scanTokensTest struct {
-	source   []byte
+	source   string
 	expected []wall.TokenKind
 }
 
 var scanTokensTests = []scanTokensTest{
-	{[]byte(""), []wall.TokenKind{wall.EOF}},
-	{[]byte("\t"), []wall.TokenKind{wall.EOF}},
-	{[]byte("\r"), []wall.TokenKind{wall.EOF}},
-	{[]byte("\r\n"), []wall.TokenKind{wall.NEWLINE, wall.EOF}},
-	{[]byte("\n"), []wall.TokenKind{wall.NEWLINE, wall.EOF}},
-	{[]byte("abc"), []wall.TokenKind{wall.IDENTIFIER, wall.EOF}},
-	{[]byte("123"), []wall.TokenKind{wall.INTEGER, wall.EOF}},
-	{[]byte("\"abc\""), []wall.TokenKind{wall.STRING, wall.EOF}},
-	{[]byte("123*123"), []wall.TokenKind{wall.INTEGER, wall.STAR, wall.INTEGER, wall.EOF}},
-	{[]byte("-1"), []wall.TokenKind{wall.MINUS, wall.INTEGER, wall.EOF}},
-	{[]byte("0.0"), []wall.TokenKind{wall.FLOAT, wall.EOF}},
-	{[]byte("+"), []wall.TokenKind{wall.PLUS, wall.EOF}},
-	{[]byte("-"), []wall.TokenKind{wall.MINUS, wall.EOF}},
-	{[]byte("*"), []wall.TokenKind{wall.STAR, wall.EOF}},
-	{[]byte("/"), []wall.TokenKind{wall.SLASH, wall.EOF}},
-	{[]byte("()"), []wall.TokenKind{wall.LEFTPAREN, wall.RIGHTPAREN, wall.EOF}},
-	{[]byte("{}"), []wall.TokenKind{wall.LEFTBRACE, wall.RIGHTBRACE, wall.EOF}},
-	{[]byte(","), []wall.TokenKind{wall.COMMA, wall.EOF}},
-	{[]byte(":"), []wall.TokenKind{wall.COLON, wall.EOF}},
-	{[]byte("::"), []wall.TokenKind{wall.COLONCOLON, wall.EOF}},
-	{[]byte("."), []wall.TokenKind{wall.DOT, wall.EOF}},
-	{[]byte("="), []wall.TokenKind{wall.EQ, wall.EOF}},
-	{[]byte("=="), []wall.TokenKind{wall.EQEQ, wall.EOF}},
-	{[]byte("!="), []wall.TokenKind{wall.BANGEQ, wall.EOF}},
-	{[]byte("<"), []wall.TokenKind{wall.LT, wall.EOF}},
-	{[]byte("<="), []wall.TokenKind{wall.LTEQ, wall.EOF}},
-	{[]byte(">"), []wall.TokenKind{wall.GT, wall.EOF}},
-	{[]byte(">="), []wall.TokenKind{wall.GTEQ, wall.EOF}},
-	{[]byte("&"), []wall.TokenKind{wall.AMP, wall.EOF}},
-	{[]byte("var"), []wall.TokenKind{wall.VAR, wall.EOF}},
-	{[]byte("fun"), []wall.TokenKind{wall.FUN, wall.EOF}},
-	{[]byte("import"), []wall.TokenKind{wall.IMPORT, wall.EOF}},
-	{[]byte("struct"), []wall.TokenKind{wall.STRUCT, wall.EOF}},
-	{[]byte("return"), []wall.TokenKind{wall.RETURN, wall.EOF}},
-	{[]byte("extern"), []wall.TokenKind{wall.EXTERN, wall.EOF}},
-	{[]byte("true"), []wall.TokenKind{wall.TRUE, wall.EOF}},
-	{[]byte("false"), []wall.TokenKind{wall.FALSE, wall.EOF}},
-	{[]byte("if"), []wall.TokenKind{wall.IF, wall.EOF}},
-	{[]byte("else"), []wall.TokenKind{wall.ELSE, wall.EOF}},
-	{[]byte("as"), []wall.TokenKind{wall.AS, wall.EOF}},
-	{[]byte("while"), []wall.TokenKind{wall.WHILE, wall.EOF}},
-	{[]byte("break"), []wall.TokenKind{wall.BREAK, wall.EOF}},
-	{[]byte("continue"), []wall.TokenKind{wall.CONTINUE, wall.EOF}},
-	{[]byte("typealias"), []wall.TokenKind{wall.TYPEALIAS, wall.EOF}},
+	{"", []wall.TokenKind{wall.EOF}},
+	{"\t", []wall.TokenKind{wall.EOF}},
+	{"\r", []wall.TokenKind{wall.EOF}},
+	{"\r\n", []wall.TokenKind{wall.NEWLINE, wall.EOF}},
+	{"\n", []wall.TokenKind{wall.NEWLINE, wall.EOF}},
+	{"abc", []wall.TokenKind{wall.IDENTIFIER, wall.EOF}},
+	{"123", []wall.TokenKind{wall.INTEGER, wall.EOF}},
+	{"\"abc\"", []wall.TokenKind{wall.STRING, wall.EOF}},
+	{"123*123", []wall.TokenKind{wall.INTEGER, wall.STAR, wall.INTEGER, wall.EOF}},
+	{"-1", []wall.TokenKind{wall.MINUS, wall.INTEGER, wall.EOF}},
+	{"0.0", []wall.TokenKind{wall.FLOAT, wall.EOF}},
+	{"+", []wall.TokenKind{wall.PLUS, wall.EOF}},
+	{"-", []wall.TokenKind{wall.MINUS, wall.EOF}},
+	{"*", []wall.TokenKind{wall.STAR, wall.EOF}},
+	{"/", []wall.TokenKind{wall.SLASH, wall.EOF}},
+	{"()", []wall.TokenKind{wall.LEFTPAREN, wall.RIGHTPAREN, wall.EOF}},
+	{"{}", []wall.TokenKind{wall.LEFTBRACE, wall.RIGHTBRACE, wall.EOF}},
+	{",", []wall.TokenKind{wall.COMMA, wall.EOF}},
+	{":", []wall.TokenKind{wall.COLON, wall.EOF}},
+	{"::", []wall.TokenKind{wall.COLONCOLON, wall.EOF}},
+	{".", []wall.TokenKind{wall.DOT, wall.EOF}},
+	{"=", []wall.TokenKind{wall.EQ, wall.EOF}},
+	{"==", []wall.TokenKind{wall.EQEQ, wall.EOF}},
+	{"!=", []wall.TokenKind{wall.BANGEQ, wall.EOF}},
+	{"<", []wall.TokenKind{wall.LT, wall.EOF}},
+	{"<=", []wall.TokenKind{wall.LTEQ, wall.EOF}},
+	{">", []wall.TokenKind{wall.GT, wall.EOF}},
+	{">=", []wall.TokenKind{wall.GTEQ, wall.EOF}},
+	{"&", []wall.TokenKind{wall.AMP, wall.EOF}},
+	{"var", []wall.TokenKind{wall.VAR, wall.EOF}},
+	{"fun", []wall.TokenKind{wall.FUN, wall.EOF}},
+	{"import", []wall.TokenKind{wall.IMPORT, wall.EOF}},
+	{"struct", []wall.TokenKind{wall.STRUCT, wall.EOF}},
+	{"return", []wall.TokenKind{wall.RETURN, wall.EOF}},
+	{"extern", []wall.TokenKind{wall.EXTERN, wall.EOF}},
+	{"true", []wall.TokenKind{wall.TRUE, wall.EOF}},
+	{"false", []wall.TokenKind{wall.FALSE, wall.EOF}},
+	{"if", []wall.TokenKind{wall.IF, wall.EOF}},
+	{"else", []wall.TokenKind{wall.ELSE, wall.EOF}},
+	{"as", []wall.TokenKind{wall.AS, wall.EOF}},
+	{"while", []wall.TokenKind{wall.WHILE, wall.EOF}},
+	{"break", []wall.TokenKind{wall.BREAK, wall.EOF}},
+	{"continue", []wall.TokenKind{wall.CONTINUE, wall.EOF}},
+	{"typealias", []wall.TokenKind{wall.TYPEALIAS, wall.EOF}},
 }
 
 func TestScanTokens(t *testing.T) {
@@ -73,17 +73,17 @@ func TestScanTokens(t *testing.T) {
 }
 
 type scannerScanTest struct {
-	source  []byte
+	source  string
 	kind    wall.TokenKind
-	content []byte
+	content string
 }
 
 var scannerScanTests = []scannerScanTest{
-	{[]byte("123"), wall.INTEGER, []byte("123")},
-	{[]byte("123*123"), wall.INTEGER, []byte("123")},
-	{[]byte("0.0"), wall.FLOAT, []byte("0.0")},
-	{[]byte("a"), wall.IDENTIFIER, []byte("a")},
-	{[]byte("\"a\""), wall.STRING, []byte("a")},
+	{"123", wall.INTEGER, "123"},
+	{"123*123", wall.INTEGER, "123"},
+	{"0.0", wall.FLOAT, "0.0"},
+	{"a", wall.IDENTIFIER, "a"},
+	{"\"a\"", wall.STRING, "a"},
 }
 
 func TestScanner_Scan(t *testing.T) {

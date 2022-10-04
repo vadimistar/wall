@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 )
 
-func ParseFile(filename string, source []byte) (*ParsedFile, error) {
+func ParseFile(filename string, source string) (*ParsedFile, error) {
 	tokens, err := ScanTokens(filename, source)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func NewParser(tokens []Token) Parser {
 	}
 }
 
-func ParseCompilationUnit(filename string, source []byte) (*ParsedFile, error) {
+func ParseCompilationUnit(filename string, source string) (*ParsedFile, error) {
 	file, err := ParseFile(filename, source)
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func resolveImport(def *ParsedImport, parsedModules map[string]*ParsedFile) (*Pa
 	if err != nil {
 		return nil, NewError(def.pos(), "unresolved import: %s (%s)", def.Name.Content, err)
 	}
-	parsedFile, err := ParseFile(importedFilename, source)
+	parsedFile, err := ParseFile(importedFilename, string(source))
 	if err != nil {
 		return nil, err
 	}
@@ -679,7 +679,7 @@ func (p *Parser) parseType() (ParsedType, error) {
 			return nil, err
 		}
 		return &ParsedIdType{
-			Token: Token{Kind: IDENTIFIER, Content: []byte("()"), Pos: l.Pos},
+			Token: Token{Kind: IDENTIFIER, Content: "()", Pos: l.Pos},
 		}, nil
 	case IDENTIFIER:
 		tok := p.advance()

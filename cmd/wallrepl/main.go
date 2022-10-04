@@ -13,13 +13,13 @@ func main() {
 
 var eval = wall.NewEvaluator()
 var depth = 0
-var buff = make([]byte, 0)
+var buff = ""
 
 func repl() {
 	for {
 		fmt.Print("> ")
 		reader := bufio.NewReader(os.Stdin)
-		text, _ := reader.ReadBytes('\n')
+		text, _ := reader.ReadString('\n')
 		text = text[:len(text)-1]
 		for _, ch := range text {
 			if ch == '{' {
@@ -33,12 +33,12 @@ func repl() {
 			panic("extra closing parenthesis")
 		}
 		if depth > 0 {
-			buff = append(buff, text...)
-			buff = append(buff, '\n')
+			buff = buff + text
+			buff = buff + "\n"
 			repl()
 		}
-		tokens, err := wall.ScanTokens("<repl>", append(buff, text...))
-		buff = make([]byte, 0)
+		tokens, err := wall.ScanTokens("<repl>", buff+text)
+		buff = ""
 		if err != nil {
 			panic(err)
 		}

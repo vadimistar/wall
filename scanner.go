@@ -1,7 +1,6 @@
 package wall
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/cznic/mathutil"
@@ -155,10 +154,10 @@ func (p Pos) String() string {
 type Token struct {
 	Pos
 	Kind    TokenKind
-	Content []byte
+	Content string
 }
 
-func ScanTokens(filename string, source []byte) ([]Token, error) {
+func ScanTokens(filename string, source string) ([]Token, error) {
 	sc := NewScanner(filename, source)
 	tokens := []Token{}
 	for {
@@ -176,14 +175,14 @@ func ScanTokens(filename string, source []byte) ([]Token, error) {
 
 type Scanner struct {
 	pos    Pos
-	source []byte
+	source string
 	start  int
 	end    int
 }
 
-func NewScanner(filename string, source []byte) Scanner {
+func NewScanner(filename string, source string) Scanner {
 	if len(source) == 0 {
-		source = append(source, 0)
+		source = source + string([]byte{0})
 	}
 	const DEFAULT_LINE uint = 1
 	return Scanner{
@@ -312,49 +311,36 @@ func (s *Scanner) id() Token {
 		s.advance()
 	}
 	t := s.token(IDENTIFIER)
-	if bytes.Equal(t.Content, []byte("var")) {
+	switch t.Content {
+	case "var":
 		t.Kind = VAR
-	}
-	if bytes.Equal(t.Content, []byte("fun")) {
+	case "fun":
 		t.Kind = FUN
-	}
-	if bytes.Equal(t.Content, []byte("import")) {
+	case "import":
 		t.Kind = IMPORT
-	}
-	if bytes.Equal(t.Content, []byte("struct")) {
+	case "struct":
 		t.Kind = STRUCT
-	}
-	if bytes.Equal(t.Content, []byte("return")) {
+	case "return":
 		t.Kind = RETURN
-	}
-	if bytes.Equal(t.Content, []byte("extern")) {
+	case "extern":
 		t.Kind = EXTERN
-	}
-	if bytes.Equal(t.Content, []byte("true")) {
+	case "true":
 		t.Kind = TRUE
-	}
-	if bytes.Equal(t.Content, []byte("false")) {
+	case "false":
 		t.Kind = FALSE
-	}
-	if bytes.Equal(t.Content, []byte("if")) {
+	case "if":
 		t.Kind = IF
-	}
-	if bytes.Equal(t.Content, []byte("else")) {
+	case "else":
 		t.Kind = ELSE
-	}
-	if bytes.Equal(t.Content, []byte("as")) {
+	case "as":
 		t.Kind = AS
-	}
-	if bytes.Equal(t.Content, []byte("while")) {
+	case "while":
 		t.Kind = WHILE
-	}
-	if bytes.Equal(t.Content, []byte("break")) {
+	case "break":
 		t.Kind = BREAK
-	}
-	if bytes.Equal(t.Content, []byte("continue")) {
+	case "continue":
 		t.Kind = CONTINUE
-	}
-	if bytes.Equal(t.Content, []byte("typealias")) {
+	case "typealias":
 		t.Kind = TYPEALIAS
 	}
 	return t

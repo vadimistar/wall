@@ -1,7 +1,6 @@
 package wall
 
 import (
-	"bytes"
 	"fmt"
 	"reflect"
 	"strings"
@@ -146,7 +145,7 @@ func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Pa
 					return err
 				}
 			}
-			if bytes.Equal(def.Id.Content, []byte("main")) && c == mainFile {
+			if def.Id.Content == "main" && c == mainFile {
 				if err := validateMain(def.pos(), paramTypes, returnType, c); err != nil {
 					return err
 				}
@@ -232,7 +231,7 @@ func checkTypeContents(p *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFi
 			}
 		case *ParsedStructDef:
 			for _, s := range c.Structs {
-				if bytes.Equal(s.Name.Content, def.Name.Content) {
+				if s.Name.Content == def.Name.Content {
 					if err := checkStructContents(def, s, c.GlobalScope); err != nil {
 						return err
 					}
@@ -240,7 +239,7 @@ func checkTypeContents(p *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFi
 			}
 		case *ParsedTypealiasDef:
 			for _, t := range c.Typealiases {
-				if bytes.Equal(t.Name.Content, def.Name.Content) {
+				if t.Name.Content == def.Name.Content {
 					checkedT, err := checkType(def.Type, c.GlobalScope)
 					if err != nil {
 						return err
@@ -291,7 +290,7 @@ func checkBlocks(p *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFile]str
 			}
 		case *ParsedFunDef:
 			for _, f := range c.Funs {
-				if bytes.Equal(f.Name.Content, def.Id.Content) {
+				if f.Name.Content == def.Id.Content {
 					if err := checkFunBlock(def, f, c.GlobalScope); err != nil {
 						return err
 					}
@@ -1210,39 +1209,39 @@ func NewCheckedFile(filename string) *CheckedFile {
 	}
 	c.GlobalScope.File = c
 	panicIf(len(c.Types) != int(UNIT_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("()")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "()"}, &BuildinType{})
 	panicIf(len(c.Types) != int(INT_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("int")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "int"}, &BuildinType{})
 	panicIf(len(c.Types) != int(INT8_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("int8")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "int8"}, &BuildinType{})
 	panicIf(len(c.Types) != int(INT16_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("int16")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "int16"}, &BuildinType{})
 	panicIf(len(c.Types) != int(INT32_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("int32")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "int32"}, &BuildinType{})
 	panicIf(len(c.Types) != int(INT64_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("int64")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "int64"}, &BuildinType{})
 	panicIf(len(c.Types) != int(UINT_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("uint")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "uint"}, &BuildinType{})
 	panicIf(len(c.Types) != int(UINT8_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("uint8")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "uint8"}, &BuildinType{})
 	panicIf(len(c.Types) != int(UINT16_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("uint16")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "uint16"}, &BuildinType{})
 	panicIf(len(c.Types) != int(UINT32_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("uint32")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "uint32"}, &BuildinType{})
 	panicIf(len(c.Types) != int(UINT64_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("uint64")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "uint64"}, &BuildinType{})
 	panicIf(len(c.Types) != int(FLOAT32_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("float32")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "float32"}, &BuildinType{})
 	panicIf(len(c.Types) != int(FLOAT64_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("float64")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "float64"}, &BuildinType{})
 	panicIf(len(c.Types) != int(CHAR_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("char")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "char"}, &BuildinType{})
 	panicIf(len(c.Types) != int(BOOL_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: []byte("bool")}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "bool"}, &BuildinType{})
 	constChar := c.TypeId(&PointerType{
 		Type: CHAR_TYPE_ID,
 	})
-	c.GlobalScope.DefineFunction(&Token{Content: []byte("inlineC")}, &FunctionType{
+	c.GlobalScope.DefineFunction(&Token{Content: "inlineC"}, &FunctionType{
 		Params:  []TypeId{constChar},
 		Returns: UNIT_TYPE_ID,
 	})

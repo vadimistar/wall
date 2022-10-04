@@ -1,7 +1,6 @@
 package wall
 
 import (
-	"bytes"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -323,22 +322,22 @@ func wallPrefixesToGlobalNames(c *CheckedFile, checkedFiles map[*CheckedFile]str
 		if !c.GlobalScope.findAndRenameType(string(def.Name.Content), attachWallPrefix(def.Name.Content)) {
 			panic(fmt.Sprintf("type not found: %s", def.Name.Content))
 		}
-		def.Name.Content = []byte(attachWallPrefix(def.Name.Content))
+		def.Name.Content = attachWallPrefix(def.Name.Content)
 	}
 	for _, def := range c.Funs {
-		if len(checkedFiles) == 1 /* this is a root module */ && bytes.Equal(def.Name.Content, []byte("main")) {
+		if len(checkedFiles) == 1 /* this is a root module */ && def.Name.Content == "main" {
 			continue
 		}
 		if !c.GlobalScope.findAndRenameFun(string(def.Name.Content), attachWallPrefix(def.Name.Content)) {
 			panic(fmt.Sprintf("fun not found: %s", def.Name.Content))
 		}
-		def.Name.Content = []byte(attachWallPrefix(def.Name.Content))
+		def.Name.Content = attachWallPrefix(def.Name.Content)
 	}
 	for _, def := range c.Typealiases {
 		if !c.GlobalScope.findAndRenameType(string(def.Name.Content), attachWallPrefix(def.Name.Content)) {
 			panic("type not found")
 		}
-		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
+		def.Name.Content = attachModuleName(def.Name.Content, def.Name.Filename)
 	}
 	for _, imp := range c.Imports {
 		wallPrefixesToGlobalNames(imp.File, checkedFiles)
@@ -354,30 +353,30 @@ func moduleNamesToGlobalNames(c *CheckedFile, checkedFiles map[*CheckedFile]stru
 		if !c.GlobalScope.findAndRenameType(string(def.Name.Content), attachModuleName(def.Name.Content, def.Name.Filename)) {
 			panic("type not found")
 		}
-		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
+		def.Name.Content = attachModuleName(def.Name.Content, def.Name.Filename)
 	}
 	for _, def := range c.Funs {
-		if len(checkedFiles) == 1 /* this is a root module */ && bytes.Equal(def.Name.Content, []byte("main")) {
+		if len(checkedFiles) == 1 /* this is a root module */ && def.Name.Content == "main" {
 			continue
 		}
 		if !c.GlobalScope.findAndRenameFun(string(def.Name.Content), attachModuleName(def.Name.Content, def.Name.Filename)) {
 			panic("fun not found")
 		}
-		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
+		def.Name.Content = attachModuleName(def.Name.Content, def.Name.Filename)
 	}
 	for _, def := range c.Typealiases {
 		if !c.GlobalScope.findAndRenameType(string(def.Name.Content), attachModuleName(def.Name.Content, def.Name.Filename)) {
 			panic("type not found")
 		}
-		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
+		def.Name.Content = attachModuleName(def.Name.Content, def.Name.Filename)
 	}
 	for _, imp := range c.Imports {
 		moduleNamesToGlobalNames(imp.File, checkedFiles)
 	}
 }
 
-func attachModuleName(name []byte, filename string) string {
-	return moduleNameFromFilename(filename) + "_" + string(name)
+func attachModuleName(name string, filename string) string {
+	return moduleNameFromFilename(filename) + "_" + name
 }
 
 func moduleNameFromFilename(filename string) string {
@@ -390,8 +389,8 @@ func moduleNameFromFilename(filename string) string {
 	return filename
 }
 
-func attachWallPrefix(name []byte) string {
-	return "WALL_" + string(name)
+func attachWallPrefix(name string) string {
+	return "WALL_" + name
 }
 
 func codegenTypeDeclarations(c *CheckedFile, checkedFiles map[*CheckedFile]struct{}) string {

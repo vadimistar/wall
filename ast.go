@@ -18,7 +18,7 @@ func (f *ParsedFile) pos() Pos {
 type ParsedDef interface {
 	ParsedNode
 	def()
-	id() []byte
+	id() string
 }
 
 type ParsedFunDef struct {
@@ -87,19 +87,19 @@ func (s *ParsedStructDef) def()    {}
 func (e *ParsedExternFunDef) def() {}
 func (p *ParsedTypealiasDef) def() {}
 
-func (f *ParsedFunDef) id() []byte {
+func (f *ParsedFunDef) id() string {
 	return f.Id.Content
 }
-func (i *ParsedImport) id() []byte {
+func (i *ParsedImport) id() string {
 	return i.Name.Content
 }
-func (s *ParsedStructDef) id() []byte {
+func (s *ParsedStructDef) id() string {
 	return s.Name.Content
 }
-func (e *ParsedExternFunDef) id() []byte {
+func (e *ParsedExternFunDef) id() string {
 	return e.Name.Content
 }
-func (p *ParsedTypealiasDef) id() []byte {
+func (p *ParsedTypealiasDef) id() string {
 	return p.Name.Content
 }
 
