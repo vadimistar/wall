@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 func main() {
 	cHeaders := flag.Bool("c", true, "include c standard library headers")
+	emitParsedAst := flag.Bool("p", false, "emit a parsed ast")
 	flag.Parse()
 	source := flag.Arg(0)
 	if filepath.Ext(source) != ".wall" {
@@ -20,6 +22,12 @@ func main() {
 	source = filepath.Base(source)
 	parsedFile, err := wall.ParseCompilationUnit(source, string(bytes))
 	check(err)
+	if *emitParsedAst {
+		j, err := json.Marshal(parsedFile)
+		check(err)
+		fmt.Println(j)
+		return
+	}
 	checkedFile, err := wall.CheckCompilationUnit(parsedFile)
 	check(err)
 	wall.LowerExternFunctions(checkedFile)
