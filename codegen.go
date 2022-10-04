@@ -334,6 +334,12 @@ func wallPrefixesToGlobalNames(c *CheckedFile, checkedFiles map[*CheckedFile]str
 		}
 		def.Name.Content = []byte(attachWallPrefix(def.Name.Content))
 	}
+	for _, def := range c.Typealiases {
+		if !c.GlobalScope.findAndRenameType(string(def.Name.Content), attachWallPrefix(def.Name.Content)) {
+			panic("type not found")
+		}
+		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
+	}
 	for _, imp := range c.Imports {
 		wallPrefixesToGlobalNames(imp.File, checkedFiles)
 	}
@@ -356,6 +362,12 @@ func moduleNamesToGlobalNames(c *CheckedFile, checkedFiles map[*CheckedFile]stru
 		}
 		if !c.GlobalScope.findAndRenameFun(string(def.Name.Content), attachModuleName(def.Name.Content, def.Name.Filename)) {
 			panic("fun not found")
+		}
+		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
+	}
+	for _, def := range c.Typealiases {
+		if !c.GlobalScope.findAndRenameType(string(def.Name.Content), attachModuleName(def.Name.Content, def.Name.Filename)) {
+			panic("type not found")
 		}
 		def.Name.Content = []byte(attachModuleName(def.Name.Content, def.Name.Filename))
 	}
@@ -431,6 +443,9 @@ func codegenTypeDefinitions(c *CheckedFile, checkedFiles map[*CheckedFile]struct
 	var builder strings.Builder
 	for _, imp := range c.Imports {
 		builder.WriteString(codegenTypeDefinitions(imp.File, checkedFiles))
+	}
+	for _, typ := range c.Typealiases {
+		fmt.Fprintf(&builder, "typedef %s %s;\n", CodegenType(typ.Type, c.GlobalScope), typ.Name.Content)
 	}
 	for _, def := range c.Structs {
 		builder.WriteString(CodegenStructDef(string(def.Name.Content), def.Fields, c.GlobalScope))

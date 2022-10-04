@@ -52,6 +52,7 @@ const (
 	WHILE
 	BREAK
 	CONTINUE
+	TYPEALIAS
 )
 
 func (t TokenKind) String() string {
@@ -136,6 +137,8 @@ func (t TokenKind) String() string {
 		return "BREAK"
 	case CONTINUE:
 		return "CONTINUE"
+	case TYPEALIAS:
+		return "TYPEALIAS"
 	}
 	panic("unreachable")
 }
@@ -351,6 +354,9 @@ func (s *Scanner) id() Token {
 	if bytes.Equal(t.Content, []byte("continue")) {
 		t.Kind = CONTINUE
 	}
+	if bytes.Equal(t.Content, []byte("typealias")) {
+		t.Kind = TYPEALIAS
+	}
 	return t
 }
 
@@ -399,6 +405,8 @@ func (s *Scanner) skipWhitespace() {
 				}
 				s.advance()
 				s.advance()
+			} else {
+				return
 			}
 		default:
 			return

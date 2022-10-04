@@ -59,6 +59,12 @@ type ParsedExternFunDef struct {
 	ReturnType ParsedType
 }
 
+type ParsedTypealiasDef struct {
+	Typealias Token
+	Name      Token
+	Type      ParsedType
+}
+
 func (f *ParsedFunDef) pos() Pos {
 	return f.Fun.Pos
 }
@@ -71,11 +77,15 @@ func (s *ParsedStructDef) pos() Pos {
 func (e *ParsedExternFunDef) pos() Pos {
 	return e.Fun.Pos
 }
+func (p *ParsedTypealiasDef) pos() Pos {
+	return p.Typealias.Pos
+}
 
 func (f *ParsedFunDef) def()       {}
 func (i *ParsedImport) def()       {}
 func (s *ParsedStructDef) def()    {}
 func (e *ParsedExternFunDef) def() {}
+func (p *ParsedTypealiasDef) def() {}
 
 func (f *ParsedFunDef) id() []byte {
 	return f.Id.Content
@@ -88,6 +98,9 @@ func (s *ParsedStructDef) id() []byte {
 }
 func (e *ParsedExternFunDef) id() []byte {
 	return e.Name.Content
+}
+func (p *ParsedTypealiasDef) id() []byte {
+	return p.Name.Content
 }
 
 type ParsedStmt interface {

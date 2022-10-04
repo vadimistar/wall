@@ -713,3 +713,17 @@ func TestParseAsExpr(t *testing.T) {
 		}, got)
 	}
 }
+
+func TestParseTypealiasDef(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{{Kind: wall.TYPEALIAS}, {Kind: wall.IDENTIFIER}, {Kind: wall.IDENTIFIER}})
+	got, err := pr.ParseDef()
+	if assert.NoError(t, err) {
+		assert.Equal(t, &wall.ParsedTypealiasDef{
+			Typealias: wall.Token{Kind: wall.TYPEALIAS},
+			Name:      wall.Token{Kind: wall.IDENTIFIER},
+			Type: &wall.ParsedIdType{
+				Token: wall.Token{Kind: wall.IDENTIFIER},
+			},
+		}, got)
+	}
+}

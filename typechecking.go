@@ -82,6 +82,15 @@ func checkTypeSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Parsed
 				return err
 			}
 			c.Structs = append(c.Structs, chechedStructDef)
+		case *ParsedTypealiasDef:
+			checked := &CheckedTypealiasDef{
+				Name: &def.Name,
+				Type: NEVER_TYPE_ID,
+			}
+			if err := c.GlobalScope.DefineTypealias(checked.Name); err != nil {
+				return err
+			}
+			c.Typealiases = append(c.Typealiases, checked)
 		}
 	}
 	return nil
@@ -227,6 +236,17 @@ func checkTypeContents(p *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFi
 					if err := checkStructContents(def, s, c.GlobalScope); err != nil {
 						return err
 					}
+				}
+			}
+		case *ParsedTypealiasDef:
+			for _, t := range c.Typealiases {
+				if bytes.Equal(t.Name.Content, def.Name.Content) {
+					checkedT, err := checkType(def.Type, c.GlobalScope)
+					if err != nil {
+						return err
+					}
+					t.Type = checkedT
+					c.GlobalScope.Types[string(t.Name.Content)].TypeId = checkedT
 				}
 			}
 		}
@@ -1008,6 +1028,17 @@ func (s *Scope) DefineType(token *Token, typ Type) error {
 	return nil
 }
 
+func (s *Scope) DefineTypealias(token *Token) error {
+	if s.findType(string(token.Content)) != nil {
+		return NewError(token.Pos, "type %s is already defined", token.Content)
+	}
+	s.Types[string(token.Content)] = &TypeName{
+		Token:  token,
+		TypeId: 0,
+	}
+	return nil
+}
+
 func (s *Scope) DefineFunction(token *Token, typ *FunctionType) error {
 	if s.findName(string(token.Content)) != nil {
 		return NewError(token.Pos, "%s is already declared", token.Content)
@@ -1139,6 +1170,7 @@ type CheckedFile struct {
 	Funs        []*CheckedFunDef
 	ExternFuns  []*CheckedExternFunDef
 	Structs     []*CheckedStructDef
+	Typealiases []*CheckedTypealiasDef
 	Types       []Type
 	GlobalScope *Scope
 }
@@ -1209,6 +1241,11 @@ type CheckedExternFunDef struct {
 	Name       *Token
 	Params     []CheckedFunParam
 	ReturnType TypeId
+}
+
+type CheckedTypealiasDef struct {
+	Name *Token
+	Type TypeId
 }
 
 type CheckedStmt interface {

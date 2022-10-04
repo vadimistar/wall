@@ -214,6 +214,21 @@ func (p *Parser) ParseDef() (ParsedDef, error) {
 			Name:   name,
 			Fields: fields,
 		}, nil
+	case TYPEALIAS:
+		typealias := p.advance()
+		name, err := p.match(IDENTIFIER)
+		if err != nil {
+			return nil, err
+		}
+		typ, err := p.parseType()
+		if err != nil {
+			return nil, err
+		}
+		return &ParsedTypealiasDef{
+			Typealias: typealias,
+			Name:      name,
+			Type:      typ,
+		}, nil
 	}
 	return nil, NewError(p.next().Pos, "expected definition, but got %s", p.next().Kind)
 }

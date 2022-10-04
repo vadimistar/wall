@@ -1023,3 +1023,21 @@ func TestCheckAsExpr(t *testing.T) {
 		}, got)
 	}
 }
+
+func TestCheckTypealiasDef(t *testing.T) {
+	file := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedTypealiasDef{
+				Typealias: wall.Token{Kind: wall.TYPEALIAS},
+				Name:      wall.Token{Kind: wall.IDENTIFIER, Content: []byte("a")},
+				Type: &wall.ParsedIdType{
+					Token: wall.Token{Kind: wall.IDENTIFIER, Content: []byte("int")},
+				},
+			},
+		},
+	}
+	checkedFile := wall.NewCheckedFile("")
+	if assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile)) && assert.NoError(t, wall.CheckTypeContents(file, checkedFile)) {
+		assert.Equal(t, wall.INT_TYPE_ID, checkedFile.GlobalScope.Types["a"].TypeId)
+	}
+}
