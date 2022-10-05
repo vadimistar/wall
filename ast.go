@@ -221,7 +221,7 @@ type ParsedCallExpr struct {
 }
 
 type ParsedStructInitExpr struct {
-	Name   ParsedIdType
+	Name   ParsedType
 	Fields []ParsedStructInitField
 }
 
@@ -267,7 +267,7 @@ func (c ParsedCallExpr) pos() Pos {
 	return c.Callee.pos()
 }
 func (s ParsedStructInitExpr) pos() Pos {
-	return s.Name.Pos
+	return s.Name.pos()
 }
 func (p ParsedObjectAccessExpr) pos() Pos {
 	return p.Object.pos()

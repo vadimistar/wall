@@ -609,13 +609,13 @@ func checkObjectAccessExpr(p *ParsedObjectAccessExpr, s *Scope) (*CheckedMemberA
 func checkStructInitExpr(p *ParsedStructInitExpr, s *Scope) (*CheckedStructInitExpr, error) {
 	checkedFields := make([]CheckedStructInitField, 0, len(p.Fields))
 	notInitialized := make(map[string]struct{}, len(p.Fields))
-	structName := s.findType(string(p.Name.Content))
-	if structName == nil {
-		return nil, NewError(p.pos(), "struct is not declared: %s", p.Name.Content)
+	structTypeId, err := checkType(p.Name, s)
+	if err != nil {
+		return nil, err
 	}
-	structType, ok := (*s.File.Types)[structName.TypeId].(*StructType)
+	structType, ok := (*s.File.Types)[structTypeId].(*StructType)
 	if !ok {
-		return nil, NewError(p.pos(), "name is not a struct: %s", p.Name.Content)
+		return nil, NewError(p.pos(), "an invalid type in the struct initializer")
 	}
 	for name := range structType.Fields {
 		notInitialized[name] = struct{}{}
@@ -646,10 +646,9 @@ func checkStructInitExpr(p *ParsedStructInitExpr, s *Scope) (*CheckedStructInitE
 		return nil, NewError(p.pos(), "uninitialized fields: %s", keys)
 	}
 	return &CheckedStructInitExpr{
-		Id:     structName.Token,
 		Fields: checkedFields,
 		Pos:    p.pos(),
-		Type:   structName.TypeId,
+		Type:   structTypeId,
 	}, nil
 }
 
@@ -1466,10 +1465,9 @@ type CheckedCallExpr struct {
 }
 
 type CheckedStructInitExpr struct {
-	Id     *Token
+	Type   TypeId
 	Fields []CheckedStructInitField
 	Pos
-	Type TypeId
 }
 
 type CheckedStructInitField struct {

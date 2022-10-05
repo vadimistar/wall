@@ -775,7 +775,7 @@ func TestCheckStructInitExpr(t *testing.T) {
 					Stmts: []wall.ParsedStmt{
 						&wall.ParsedExprStmt{
 							Expr: &wall.ParsedStructInitExpr{
-								Name: wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "Point"}},
+								Name: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "Point"}},
 								Fields: []wall.ParsedStructInitField{
 									{
 										Name: wall.Token{Kind: wall.IDENTIFIER, Content: "x"},

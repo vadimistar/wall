@@ -119,7 +119,7 @@ func codegenMemberAccessExpr(expr *CheckedMemberAccessExpr, s *Scope) string {
 
 func codegenStructInitExpr(expr *CheckedStructInitExpr, s *Scope) string {
 	var builder strings.Builder
-	fmt.Fprintf(&builder, "(%s) {\n", string(expr.Id.Content))
+	fmt.Fprintf(&builder, "(%s) {\n", CodegenType(expr.Type, s))
 	for i, field := range expr.Fields {
 		fmt.Fprintf(&builder, ".%s = %s", field.Name.Content, CodegenExpr(field.Value, s))
 		if i+1 < len(expr.Fields) {

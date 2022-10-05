@@ -216,14 +216,14 @@ var parseStructInitExprTests = []parseStructInitExprTest{
 	{
 		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: "Bob"}, {Kind: wall.LEFTBRACE}, {Kind: wall.RIGHTBRACE}},
 		expected: &wall.ParsedStructInitExpr{
-			Name:   wall.ParsedIdType{},
+			Name:   &wall.ParsedIdType{},
 			Fields: []wall.ParsedStructInitField{},
 		},
 	},
 	{
 		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: "Bob"}, {Kind: wall.LEFTBRACE}, {Kind: wall.IDENTIFIER, Content: "age"}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTBRACE}},
 		expected: &wall.ParsedStructInitExpr{
-			Name: wall.ParsedIdType{},
+			Name: &wall.ParsedIdType{},
 			Fields: []wall.ParsedStructInitField{
 				{
 					Name: wall.Token{Kind: wall.IDENTIFIER, Content: "age"},
@@ -237,7 +237,7 @@ var parseStructInitExprTests = []parseStructInitExprTest{
 	{
 		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: "Bob"}, {Kind: wall.LEFTBRACE}, {Kind: wall.IDENTIFIER, Content: "age"}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.RIGHTBRACE}},
 		expected: &wall.ParsedStructInitExpr{
-			Name: wall.ParsedIdType{},
+			Name: &wall.ParsedIdType{},
 			Fields: []wall.ParsedStructInitField{
 				{
 					Name: wall.Token{Kind: wall.IDENTIFIER, Content: "age"},
@@ -251,7 +251,7 @@ var parseStructInitExprTests = []parseStructInitExprTest{
 	{
 		tokens: []wall.Token{{Kind: wall.IDENTIFIER, Content: "Bob"}, {Kind: wall.LEFTBRACE}, {Kind: wall.NEWLINE}, {Kind: wall.IDENTIFIER, Content: "age"}, {Kind: wall.COLON}, {Kind: wall.INTEGER}, {Kind: wall.COMMA}, {Kind: wall.NEWLINE}, {Kind: wall.RIGHTBRACE}},
 		expected: &wall.ParsedStructInitExpr{
-			Name: wall.ParsedIdType{},
+			Name: &wall.ParsedIdType{},
 			Fields: []wall.ParsedStructInitField{
 				{
 					Name: wall.Token{Kind: wall.IDENTIFIER, Content: "age"},

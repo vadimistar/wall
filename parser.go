@@ -468,122 +468,59 @@ func precedence(t TokenKind) int {
 	return -1
 }
 
+func isUnaryOp(t TokenKind) bool {
+	return t == PLUS || t == MINUS || t == STAR || t == AMP
+}
+
 func (p *Parser) parsePrimary() (expr ParsedExpr, err error) {
-	switch t := p.next(); t.Kind {
-	case INTEGER, FLOAT, STRING, TRUE, FALSE:
-		t := p.advance()
-		expr = &ParsedLiteralExpr{Token: t}
-	case IDENTIFIER:
-		t := p.advance()
-		if p.next().Kind == COLONCOLON {
-			coloncolon := p.advance()
-			member, err := p.parsePrimary()
-			if err != nil {
-				return nil, err
-			}
-			return &ParsedModuleAccessExpr{
-				Module:     t,
-				Coloncolon: coloncolon,
-				Member:     member,
-			}, nil
-		}
-		if (p.next().Kind == LEFTBRACE && p.peek(1).Kind == RIGHTBRACE) ||
-			(p.next().Kind == LEFTBRACE && p.peek(1).Kind == IDENTIFIER && p.peek(2).Kind == COLON) ||
-			(p.next().Kind == LEFTBRACE && p.peek(1).Kind == NEWLINE && p.peek(2).Kind == IDENTIFIER && p.peek(3).Kind == COLON) {
-			fields := make([]ParsedStructInitField, 0)
-			p.advance()
-			for p.next().Kind != RIGHTBRACE {
-				if p.next().Kind == NEWLINE {
-					p.advance()
-					continue
-				}
-				name, err := p.match(IDENTIFIER)
-				if err != nil {
-					return nil, err
-				}
-				_, err = p.match(COLON)
-				if err != nil {
-					return nil, err
-				}
-				value, err := p.ParseExpr()
-				if err != nil {
-					return nil, err
-				}
-				fields = append(fields, ParsedStructInitField{
-					Name:  name,
-					Value: value,
-				})
-				if p.next().Kind == RIGHTBRACE {
-					break
-				}
-				_, err = p.match(COMMA)
-				if err != nil {
-					return nil, err
-				}
-			}
-			p.advance()
-			expr = &ParsedStructInitExpr{
-				Name: ParsedIdType{
-					Token: t,
-				},
-				Fields: fields,
-			}
-		} else {
-			expr = &ParsedIdExpr{Token: t}
-		}
-	case LEFTPAREN:
-		left := p.advance()
-		inner, err := p.ParseExpr()
-		if err != nil {
-			return nil, err
-		}
-		right, err := p.match(RIGHTPAREN)
-		if err != nil {
-			return nil, err
-		}
-		expr = &ParsedGroupedExpr{
-			Left:  left,
-			Inner: inner,
-			Right: right,
-		}
-	case PLUS, MINUS, AMP, STAR:
+	switch {
+	case isUnaryOp(p.next().Kind):
 		operator := p.advance()
 		operand, err := p.parsePrimary()
 		if err != nil {
 			return nil, err
 		}
-		expr = &ParsedUnaryExpr{
+		return &ParsedUnaryExpr{
 			Operator: operator,
 			Operand:  operand,
-		}
+		}, nil
 	default:
-		return nil, NewError(p.next().Pos, "expected primary expression, but got %s", p.next().Kind)
-	}
-	for {
-		if p.next().Kind == LEFTPAREN {
-			p.advance()
-			args := make([]ParsedExpr, 0)
-			for p.next().Kind != RIGHTPAREN {
-				arg, err := p.ParseExpr()
-				if err != nil {
-					return nil, err
-				}
-				args = append(args, arg)
-				if p.next().Kind == RIGHTPAREN {
-					break
-				}
-				if _, err := p.match(COMMA); err != nil {
-					return nil, err
-				}
-			}
-			if _, err := p.match(RIGHTPAREN); err != nil {
+		switch p.next().Kind {
+		case INTEGER, FLOAT, STRING, TRUE, FALSE:
+			expr = &ParsedLiteralExpr{Token: p.advance()}
+		case IDENTIFIER:
+			expr, err = p.parseId()
+			if err != nil {
 				return nil, err
 			}
-			expr = &ParsedCallExpr{
-				Callee: expr,
-				Args:   args,
+		case LEFTPAREN:
+			left := p.advance()
+			inner, err := p.ParseExpr()
+			if err != nil {
+				return nil, err
 			}
-		} else if p.next().Kind == DOT {
+			right, err := p.match(RIGHTPAREN)
+			if err != nil {
+				return nil, err
+			}
+			expr = &ParsedGroupedExpr{
+				Left:  left,
+				Inner: inner,
+				Right: right,
+			}
+		default:
+			return nil, NewError(p.next().Pos, "expected a primary expression, but got %s", p.next().Kind)
+		}
+	}
+Loop:
+	for {
+		switch p.next().Kind {
+		case LEFTPAREN:
+			expr, err = p.parseArgs(expr)
+			if err != nil {
+				return nil, err
+			}
+		case DOT:
 			dot := p.advance()
 			member, err := p.match(IDENTIFIER)
 			if err != nil {
@@ -594,22 +531,164 @@ func (p *Parser) parsePrimary() (expr ParsedExpr, err error) {
 				Dot:    dot,
 				Member: member,
 			}
-		} else if p.next().Kind == AS {
+		case AS:
 			as := p.advance()
 			typ, err := p.parseType()
 			if err != nil {
 				return nil, err
 			}
-			return &ParsedAsExpr{
+			expr = &ParsedAsExpr{
 				Value: expr,
 				As:    as,
 				Type:  typ,
-			}, nil
-		} else {
-			break
+			}
+			if err != nil {
+				return nil, err
+			}
+		case LEFTBRACE:
+			if (p.peek(1).Kind == RIGHTBRACE) || (p.peek(1).Kind == IDENTIFIER && p.peek(2).Kind == COLON) || (p.peek(1).Kind == NEWLINE && p.peek(2).Kind == IDENTIFIER && p.peek(3).Kind == COLON) {
+				expr, err = p.parseStructInitBody(expr)
+				if err != nil {
+					return nil, err
+				}
+				continue
+			}
+			break Loop
+		default:
+			break Loop
+		}
+	}
+	return
+}
+
+func (p *Parser) parseId() (expr ParsedExpr, err error) {
+	if p.peek(1).Kind != COLONCOLON {
+		return &ParsedIdExpr{Token: p.advance()}, nil
+	}
+	path := make([]Token, 0, 1)
+	coloncolons := make([]Token, 0, 1)
+	for p.peek(1).Kind == COLONCOLON {
+		module, err := p.match(IDENTIFIER)
+		if err != nil {
+			return nil, err
+		}
+		path = append(path, module)
+		coloncolons = append(coloncolons, p.advance())
+	}
+	id, err := p.match(IDENTIFIER)
+	if err != nil {
+		return nil, err
+	}
+	expr = &ParsedIdExpr{
+		Token: id,
+	}
+	for i := len(path) - 1; i >= 0; i-- {
+		expr = &ParsedModuleAccessExpr{
+			Module:     path[i],
+			Coloncolon: coloncolons[i],
+			Member:     expr,
 		}
 	}
 	return expr, nil
+}
+
+func (p *Parser) parseStructInitBody(name ParsedExpr) (*ParsedStructInitExpr, error) {
+	typ, err := parsedExprToParsedType(name)
+	if err != nil {
+		return nil, err
+	}
+	_, err = p.match(LEFTBRACE)
+	if err != nil {
+		return nil, err
+	}
+	fields := make([]ParsedStructInitField, 0)
+	for p.next().Kind != RIGHTBRACE {
+		if p.next().Kind == NEWLINE {
+			p.advance()
+			continue
+		}
+		name, err := p.match(IDENTIFIER)
+		if err != nil {
+			return nil, err
+		}
+		_, err = p.match(COLON)
+		if err != nil {
+			return nil, err
+		}
+		value, err := p.ParseExpr()
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, ParsedStructInitField{
+			Name:  name,
+			Value: value,
+		})
+		if p.next().Kind == RIGHTBRACE {
+			break
+		}
+		_, err = p.match(COMMA)
+		if err != nil {
+			return nil, err
+		}
+	}
+	_, err = p.match(RIGHTBRACE)
+	if err != nil {
+		return nil, err
+	}
+	return &ParsedStructInitExpr{
+		Name:   typ,
+		Fields: fields,
+	}, nil
+}
+
+func parsedExprToParsedType(p ParsedExpr) (ParsedType, error) {
+	switch p := p.(type) {
+	case *ParsedGroupedExpr:
+		return parsedExprToParsedType(p.Inner)
+	case *ParsedIdExpr:
+		return &ParsedIdType{
+			Token: p.Token,
+		}, nil
+	case *ParsedModuleAccessExpr:
+		member, err := parsedExprToParsedType(p.Member)
+		if err != nil {
+			return nil, err
+		}
+		return &ParsedModuleAccessType{
+			Module:     p.Module,
+			Coloncolon: p.Coloncolon,
+			Member:     member,
+		}, nil
+	}
+	return nil, NewError(p.pos(), "an invalid type in the struct initializer")
+}
+
+func (p *Parser) parseArgs(callee ParsedExpr) (*ParsedCallExpr, error) {
+	_, err := p.match(LEFTPAREN)
+	if err != nil {
+		return nil, err
+	}
+	args := make([]ParsedExpr, 0)
+	for p.next().Kind != RIGHTPAREN {
+		arg, err := p.ParseExpr()
+		if err != nil {
+			return nil, err
+		}
+		args = append(args, arg)
+		if p.next().Kind == RIGHTPAREN {
+			break
+		}
+		if _, err := p.match(COMMA); err != nil {
+			return nil, err
+		}
+	}
+	if _, err := p.match(RIGHTPAREN); err != nil {
+		return nil, err
+	}
+	return &ParsedCallExpr{
+		Callee: callee,
+		Args:   args,
+	}, nil
 }
 
 func (p *Parser) next() Token {
@@ -685,10 +764,11 @@ func (p *Parser) parseType() (ParsedType, error) {
 			Token: Token{Kind: IDENTIFIER, Content: "()", Pos: l.Pos},
 		}, nil
 	case IDENTIFIER:
-		tok := p.advance()
-		return &ParsedIdType{
-			Token: tok,
-		}, nil
+		expr, err := p.parseId()
+		if err != nil {
+			return nil, err
+		}
+		return parsedExprToParsedType(expr)
 	case STAR:
 		star := p.advance()
 		to, err := p.parseType()
