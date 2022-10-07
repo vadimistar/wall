@@ -492,31 +492,18 @@ func checkExprStmt(p *ParsedExprStmt, s *Scope, controlFlow ControlFlow) (*Check
 }
 
 func checkVar(p *ParsedVar, s *Scope, controlFlow ControlFlow) (*CheckedVar, error) {
-	var val CheckedExpr
-	var typ TypeId
-	if p.Value != nil {
-		var err error
-		val, err = CheckExpr(p.Value, s)
-		if err != nil {
-			return nil, err
-		}
-		typ = val.TypeId()
-	} else {
-		var err error
-		typ, err = checkType(p.Type, s)
-		if err != nil {
-			return nil, err
-		}
+	val, err := CheckExpr(p.Value, s)
+	if err != nil {
+		return nil, err
 	}
-	if typ == UNIT_TYPE_ID {
+	if val.TypeId() == UNIT_TYPE_ID {
 		return nil, NewError(p.pos(), "can't declare a variable of type %s", s.TypeToString(UNIT_TYPE_ID))
 	}
 	checked := &CheckedVar{
 		Name:  &p.Id,
-		Type:  typ,
 		Value: val,
 	}
-	if err := s.DefineVar(checked.Name, typ); err != nil {
+	if err := s.DefineVar(checked.Name, val.TypeId()); err != nil {
 		return nil, err
 	}
 	return checked, nil
@@ -1349,7 +1336,6 @@ type CheckedStmt interface {
 
 type CheckedVar struct {
 	Name  *Token
-	Type  TypeId
 	Value CheckedExpr
 }
 

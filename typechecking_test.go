@@ -604,17 +604,6 @@ func TestCheckVarStmt(t *testing.T) {
 								Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 							},
 						},
-						&wall.ParsedVar{
-							Id: wall.Token{Content: "b"},
-							Type: &wall.ParsedIdType{
-								Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int32"},
-							},
-						},
-						&wall.ParsedReturn{
-							Arg: &wall.ParsedIdExpr{
-								Token: wall.Token{Kind: wall.IDENTIFIER, Content: "b"},
-							},
-						},
 					},
 				},
 				ReturnType: &wall.ParsedIdType{
@@ -828,9 +817,22 @@ func TestCheckStructAccessExpr(t *testing.T) {
 					Left: wall.Token{Kind: wall.LEFTBRACE},
 					Stmts: []wall.ParsedStmt{
 						&wall.ParsedVar{
-							Id:    wall.Token{Kind: wall.IDENTIFIER, Content: "p"},
-							Type:  &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "Point"}},
-							Value: nil,
+							Id: wall.Token{Kind: wall.IDENTIFIER, Content: "p"},
+							Value: &wall.ParsedStructInitExpr{
+								Name: &wall.ParsedIdType{
+									Token: wall.Token{Kind: wall.IDENTIFIER, Content: "Point"},
+								},
+								Fields: []wall.ParsedStructInitField{
+									{
+										Name:  wall.Token{Kind: wall.IDENTIFIER, Content: "x"},
+										Value: &wall.ParsedLiteralExpr{Token: wall.Token{Kind: wall.INTEGER}},
+									},
+									{
+										Name:  wall.Token{Kind: wall.IDENTIFIER, Content: "y"},
+										Value: &wall.ParsedLiteralExpr{Token: wall.Token{Kind: wall.INTEGER}},
+									},
+								},
+							},
 						},
 						&wall.ParsedExprStmt{
 							Expr: &wall.ParsedObjectAccessExpr{
@@ -978,8 +980,15 @@ func TestCheckModuleAccessType(t *testing.T) {
 					Stmts: []wall.ParsedStmt{
 						&wall.ParsedVar{
 							Id: wall.Token{Kind: wall.IDENTIFIER, Content: "v"},
-							Type: &wall.ParsedIdType{
-								Token: wall.Token{Kind: wall.IDENTIFIER, Content: "A"},
+							Value: &wall.ParsedStructInitExpr{
+								Name: &wall.ParsedModuleAccessType{
+									Module:     wall.Token{Kind: wall.IDENTIFIER, Content: "B"},
+									Coloncolon: wall.Token{Kind: wall.COLONCOLON},
+									Member: &wall.ParsedIdType{
+										Token: wall.Token{Kind: wall.IDENTIFIER, Content: "A"},
+									},
+								},
+								Fields: []wall.ParsedStructInitField{},
 							},
 						},
 					},

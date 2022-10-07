@@ -109,10 +109,9 @@ type ParsedStmt interface {
 }
 
 type ParsedVar struct {
-	Var   Token
-	Id    Token
-	Type  ParsedType
-	Value ParsedExpr
+	Id      Token
+	ColonEq Token
+	Value   ParsedExpr
 }
 
 type ParsedExprStmt struct {

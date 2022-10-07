@@ -27,6 +27,7 @@ const (
 	COMMA
 	COLON
 	COLONCOLON
+	COLONEQ
 	DOT
 	EQEQ
 	BANGEQ
@@ -37,7 +38,6 @@ const (
 	AMP
 
 	// keywords
-	VAR
 	FUN
 	IMPORT
 	STRUCT
@@ -92,6 +92,8 @@ func (t TokenKind) String() string {
 		return ":"
 	case COLONCOLON:
 		return "::"
+	case COLONEQ:
+		return ":="
 	case DOT:
 		return "."
 	case EQEQ:
@@ -108,8 +110,6 @@ func (t TokenKind) String() string {
 		return ">="
 	case AMP:
 		return "&"
-	case VAR:
-		return "VAR"
 	case FUN:
 		return "FUN"
 	case IMPORT:
@@ -270,6 +270,9 @@ func (s *Scanner) Scan() (Token, error) {
 		if s.next() == ':' {
 			s.advance()
 			t = s.token(COLONCOLON)
+		} else if s.next() == '=' {
+			s.advance()
+			t = s.token(COLONEQ)
 		} else {
 			t = s.token(COLON)
 		}
@@ -312,8 +315,6 @@ func (s *Scanner) id() Token {
 	}
 	t := s.token(IDENTIFIER)
 	switch t.Content {
-	case "var":
-		t.Kind = VAR
 	case "fun":
 		t.Kind = FUN
 	case "import":

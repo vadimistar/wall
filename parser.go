@@ -250,38 +250,6 @@ func (p *Parser) ParseDefAndEof() (ParsedDef, error) {
 
 func (p *Parser) ParseStmt() (ParsedStmt, error) {
 	switch p.next().Kind {
-	case VAR:
-		varToken := p.advance()
-		id, err := p.match(IDENTIFIER)
-		if err != nil {
-			return nil, err
-		}
-		if p.next().Kind == EQ {
-			_, err = p.match(EQ)
-			if err != nil {
-				return nil, err
-			}
-			val, err := p.ParseExpr()
-			if err != nil {
-				return nil, err
-			}
-			return &ParsedVar{
-				Var:   varToken,
-				Id:    id,
-				Type:  nil,
-				Value: val,
-			}, nil
-		}
-		t, err := p.parseType()
-		if err != nil {
-			return nil, err
-		}
-		return &ParsedVar{
-			Var:   varToken,
-			Id:    id,
-			Type:  t,
-			Value: nil,
-		}, nil
 	case RETURN:
 		kw := p.advance()
 		if p.next().Kind != NEWLINE && p.next().Kind != EOF && p.next().Kind != RIGHTBRACE {
@@ -351,6 +319,26 @@ func (p *Parser) ParseStmt() (ParsedStmt, error) {
 		return &ParsedContinue{
 			Continue: p.advance(),
 		}, nil
+	case IDENTIFIER:
+		if p.peek(1).Kind == COLONEQ {
+			id, err := p.match(IDENTIFIER)
+			if err != nil {
+				return nil, err
+			}
+			coloneq, err := p.match(COLONEQ)
+			if err != nil {
+				return nil, err
+			}
+			val, err := p.ParseExpr()
+			if err != nil {
+				return nil, err
+			}
+			return &ParsedVar{
+				Id:      id,
+				ColonEq: coloneq,
+				Value:   val,
+			}, nil
+		}
 	}
 	expr, err := p.ParseExpr()
 	if err != nil {

@@ -241,12 +241,8 @@ func codegenWhile(stmt *CheckedWhile, s *Scope) string {
 }
 
 func codegenVarStmt(stmt *CheckedVar, s *Scope) string {
-	if stmt.Value == nil {
-		t := CodegenType(stmt.Type, s)
-		return fmt.Sprintf("%s %s = (%s) {0};", t, string(stmt.Name.Content), t)
-	}
 	val := CodegenExpr(stmt.Value, s)
-	t := CodegenType(stmt.Type, s)
+	t := CodegenType(stmt.Value.TypeId(), s)
 	return fmt.Sprintf("%s %s = %s;", t, string(stmt.Name.Content), val)
 }
 
