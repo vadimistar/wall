@@ -881,7 +881,7 @@ func TestCheckAddressOp(t *testing.T) {
 			Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
 		},
 	}
-	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: "a"}, wall.INT_TYPE_ID)
+	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: "a"}, wall.INT_TYPE_ID, true)
 	checkedExpr, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
 	if assert.NoError(t, err) {
 		assert.Equal(t, checkedExpr.TypeId(), checkedFile.TypeId(&wall.PointerType{
@@ -900,7 +900,7 @@ func TestCheckDerefOp(t *testing.T) {
 	}
 	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: "a"}, checkedFile.TypeId(&wall.PointerType{
 		Type: wall.INT_TYPE_ID,
-	}))
+	}), true)
 	checkedExpr, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
 	if assert.NoError(t, err) {
 		assert.Equal(t, checkedExpr.TypeId(), wall.INT_TYPE_ID)
@@ -918,11 +918,27 @@ func TestCheckAssignExpr(t *testing.T) {
 			Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
 		},
 	}
-	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: "a"}, wall.INT32_TYPE_ID)
+	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: "a"}, wall.INT32_TYPE_ID, true)
 	checkedExpr, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
 	if assert.NoError(t, err) {
 		assert.Equal(t, checkedExpr.TypeId(), wall.INT32_TYPE_ID)
 	}
+}
+
+func TestCheckAssignExprErr(t *testing.T) {
+	checkedFile := wall.NewCheckedCompilationUnit("")
+	parsedExpr := &wall.ParsedBinaryExpr{
+		Left: &wall.ParsedIdExpr{
+			Token: wall.Token{Kind: wall.IDENTIFIER, Content: "a"},
+		},
+		Op: wall.Token{Kind: wall.EQ},
+		Right: &wall.ParsedLiteralExpr{
+			Token: wall.Token{Kind: wall.INTEGER, Content: "0"},
+		},
+	}
+	checkedFile.GlobalScope.DefineVar(&wall.Token{Kind: wall.IDENTIFIER, Content: "a"}, wall.INT32_TYPE_ID, false)
+	_, err := wall.CheckExpr(parsedExpr, checkedFile.GlobalScope)
+	assert.Error(t, err)
 }
 
 func TestCheckModuleAccessExpr(t *testing.T) {

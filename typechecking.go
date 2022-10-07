@@ -304,7 +304,7 @@ func checkBlocks(p *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFile]str
 func checkFunBlock(p *ParsedFunDef, c *CheckedFunDef, s *Scope) error {
 	s = NewScope(s)
 	for _, param := range c.Params {
-		if err := s.DefineVar(param.Name, param.Type); err != nil {
+		if err := s.DefineVar(param.Name, param.Type, false); err != nil {
 			return err
 		}
 	}
@@ -500,10 +500,11 @@ func checkVar(p *ParsedVar, s *Scope, controlFlow ControlFlow) (*CheckedVar, err
 		return nil, NewError(p.pos(), "can't declare a variable of type %s", s.TypeToString(UNIT_TYPE_ID))
 	}
 	checked := &CheckedVar{
+		Mut:   p.Mut,
 		Name:  &p.Id,
 		Value: val,
 	}
-	if err := s.DefineVar(checked.Name, val.TypeId()); err != nil {
+	if err := s.DefineVar(checked.Name, val.TypeId(), p.Mut != nil); err != nil {
 		return nil, err
 	}
 	return checked, nil
@@ -755,7 +756,10 @@ func checkBinaryOperator(operator Token, left CheckedExpr, right TypeId, s *Scop
 		if isTemporaryValue(left) {
 			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "can't assign to a temporary value: %s", s.TypeToString(left.TypeId()))
 		}
-		return CHECKED_ASSIGN, left.TypeId(), nil
+		if isMutable(left, s) {
+			return CHECKED_ASSIGN, left.TypeId(), nil
+		}
+		return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "left side of an expression is not mutable")
 	case PLUS:
 		if !traitIsImplemented(ADD_TRAIT, left.TypeId(), s) {
 			return INVALID_BINARY_OPERATOR, NOT_FOUND, NewError(operator.Pos, "operator + is not defined for types %s and %s (try to implement %s trait)", s.TypeToString(left.TypeId()), s.TypeToString(right), ADD_TRAIT)
@@ -804,6 +808,23 @@ func checkBinaryOperator(operator Token, left CheckedExpr, right TypeId, s *Scop
 		}
 	}
 	panic("unreachable")
+}
+
+func isMutable(left CheckedExpr, s *Scope) bool {
+	switch left := left.(type) {
+	case *CheckedIdExpr:
+		name := s.findVar(left.Id.Content)
+		if name != nil {
+			return name.Mutable
+		}
+	case *CheckedGroupedExpr:
+		return isMutable(left.Inner, s)
+	case *CheckedMemberAccessExpr:
+		return isMutable(left.Object, s)
+	case *CheckedModuleAccessExpr:
+		return isMutable(left.Member, s.File.Imports[s.findImport(left.Module.Content)].File.GlobalScope)
+	}
+	return false
 }
 
 func checkUnaryExpr(p *ParsedUnaryExpr, s *Scope) (*CheckedUnaryExpr, error) {
@@ -983,6 +1004,7 @@ func checkType(t ParsedType, s *Scope) (TypeId, error) {
 type Name struct {
 	Token *Token
 	TypeId
+	Mutable bool
 }
 
 type TypeName struct {
@@ -1060,13 +1082,14 @@ func (s *Scope) DefineFunction(token *Token, typ *FunctionType) error {
 	return nil
 }
 
-func (s *Scope) DefineVar(token *Token, typ TypeId) error {
+func (s *Scope) DefineVar(token *Token, typ TypeId, mutable bool) error {
 	if s.findName(string(token.Content)) != nil {
 		return NewError(token.Pos, "%s is already declared", token.Content)
 	}
 	s.Vars[string(token.Content)] = &Name{
-		Token:  token,
-		TypeId: typ,
+		Token:   token,
+		TypeId:  typ,
+		Mutable: mutable,
 	}
 	return nil
 }
@@ -1335,6 +1358,7 @@ type CheckedStmt interface {
 }
 
 type CheckedVar struct {
+	Mut   *Token
 	Name  *Token
 	Value CheckedExpr
 }

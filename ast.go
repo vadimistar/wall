@@ -109,6 +109,7 @@ type ParsedStmt interface {
 }
 
 type ParsedVar struct {
+	Mut     *Token
 	Id      Token
 	ColonEq Token
 	Value   ParsedExpr

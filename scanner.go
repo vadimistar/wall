@@ -52,6 +52,7 @@ const (
 	BREAK
 	CONTINUE
 	TYPEALIAS
+	MUT
 )
 
 func (t TokenKind) String() string {
@@ -138,6 +139,8 @@ func (t TokenKind) String() string {
 		return "CONTINUE"
 	case TYPEALIAS:
 		return "TYPEALIAS"
+	case MUT:
+		return "MUT"
 	}
 	panic("unreachable")
 }
@@ -343,6 +346,8 @@ func (s *Scanner) id() Token {
 		t.Kind = CONTINUE
 	case "typealias":
 		t.Kind = TYPEALIAS
+	case "mut":
+		t.Kind = MUT
 	}
 	return t
 }

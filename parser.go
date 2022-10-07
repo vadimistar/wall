@@ -319,25 +319,9 @@ func (p *Parser) ParseStmt() (ParsedStmt, error) {
 		return &ParsedContinue{
 			Continue: p.advance(),
 		}, nil
-	case IDENTIFIER:
-		if p.peek(1).Kind == COLONEQ {
-			id, err := p.match(IDENTIFIER)
-			if err != nil {
-				return nil, err
-			}
-			coloneq, err := p.match(COLONEQ)
-			if err != nil {
-				return nil, err
-			}
-			val, err := p.ParseExpr()
-			if err != nil {
-				return nil, err
-			}
-			return &ParsedVar{
-				Id:      id,
-				ColonEq: coloneq,
-				Value:   val,
-			}, nil
+	case MUT, IDENTIFIER:
+		if (p.next().Kind == MUT && p.peek(1).Kind == IDENTIFIER && p.peek(2).Kind == COLONEQ) || (p.peek(1).Kind == COLONEQ) {
+			return p.parseVar()
 		}
 	}
 	expr, err := p.ParseExpr()
@@ -346,6 +330,32 @@ func (p *Parser) ParseStmt() (ParsedStmt, error) {
 	}
 	return &ParsedExprStmt{
 		Expr: expr,
+	}, nil
+}
+
+func (p *Parser) parseVar() (*ParsedVar, error) {
+	var mut *Token
+	if p.next().Kind == MUT {
+		mutT := p.advance()
+		mut = &mutT
+	}
+	id, err := p.match(IDENTIFIER)
+	if err != nil {
+		return nil, err
+	}
+	coloneq, err := p.match(COLONEQ)
+	if err != nil {
+		return nil, err
+	}
+	val, err := p.ParseExpr()
+	if err != nil {
+		return nil, err
+	}
+	return &ParsedVar{
+		Mut:     mut,
+		Id:      id,
+		ColonEq: coloneq,
+		Value:   val,
 	}, nil
 }
 

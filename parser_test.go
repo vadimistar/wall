@@ -281,6 +281,13 @@ func TestParseVarStmt(t *testing.T) {
 	assert.Equal(t, reflect.TypeOf(stmt), reflect.TypeOf(&wall.ParsedVar{}))
 }
 
+func TestParseMutVarStmt(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{{Kind: wall.MUT}, {Kind: wall.IDENTIFIER}, {Kind: wall.COLONEQ}, {Kind: wall.INTEGER}})
+	stmt, err := pr.ParseStmtAndEof()
+	assert.NoError(t, err)
+	assert.Equal(t, reflect.TypeOf(stmt), reflect.TypeOf(&wall.ParsedVar{}))
+}
+
 func TestParseReturnStmt(t *testing.T) {
 	pr := wall.NewParser([]wall.Token{{Kind: wall.RETURN}, {Kind: wall.IDENTIFIER}})
 	stmt, err := pr.ParseStmtAndEof()
