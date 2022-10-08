@@ -26,25 +26,33 @@ func lowerExternFunctions(c *CheckedFile, checked map[*CheckedFile]struct{}) {
 		builder.WriteString(")")
 		inlineCText := builder.String()
 		inlineCFun := c.GlobalScope.findFunction("inlineC")
-		inlineC := &CheckedReturn{
-			Value: &CheckedCallExpr{
-				Callee: &CheckedIdExpr{
-					Id:   inlineCFun.Token,
-					Type: inlineCFun.TypeId,
-				},
-				Args: []CheckedExpr{
-					&CheckedLiteralExpr{
-						Literal: Token{
-							Kind:    STRING,
-							Content: inlineCText,
-						},
-						Type: c.TypeId(&PointerType{
-							Type: CHAR_TYPE_ID,
-						}),
-					},
-				},
-				Type: f.ReturnType,
+		callExpr := &CheckedCallExpr{
+			Callee: &CheckedIdExpr{
+				Id:   inlineCFun.Token,
+				Type: inlineCFun.TypeId,
 			},
+			Args: []CheckedExpr{
+				&CheckedLiteralExpr{
+					Literal: Token{
+						Kind:    STRING,
+						Content: inlineCText,
+					},
+					Type: c.TypeId(&PointerType{
+						Type: CHAR_TYPE_ID,
+					}),
+				},
+			},
+			Type: f.ReturnType,
+		}
+		var inlineC CheckedStmt
+		if f.ReturnType != UNIT_TYPE_ID {
+			inlineC = &CheckedReturn{
+				Value: callExpr,
+			}
+		} else {
+			inlineC = &CheckedExprStmt{
+				Expr: callExpr,
+			}
 		}
 		c.Funs = append(c.Funs, &CheckedFunDef{
 			Name:       f.Name,
