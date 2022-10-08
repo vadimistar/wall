@@ -648,6 +648,7 @@ func checkIdExpr(p *ParsedIdExpr, s *Scope) (*CheckedIdExpr, error) {
 	return &CheckedIdExpr{
 		Id:   name.Token,
 		Type: name.TypeId,
+		Pos:  p.Pos,
 	}, nil
 }
 
@@ -1465,7 +1466,7 @@ type CheckedLiteralExpr struct {
 type CheckedIdExpr struct {
 	Id   *Token
 	Type TypeId
-	// TODO ADD POS
+	Pos
 }
 
 type CheckedCallExpr struct {
