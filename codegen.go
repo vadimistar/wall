@@ -193,7 +193,14 @@ func codegenGroupedExpr(expr *CheckedGroupedExpr, s *Scope) string {
 func codegenLiteralExpr(expr *CheckedLiteralExpr, s *Scope) string {
 	if expr.Literal.Kind == STRING {
 		s := string(expr.Literal.Content)
-		s = strings.ReplaceAll(s, "\n", "\n\"")
+		s = strings.ReplaceAll(s, "\a", "\\a")
+		s = strings.ReplaceAll(s, "\b", "\\b")
+		s = strings.ReplaceAll(s, "\f", "\\f")
+		s = strings.ReplaceAll(s, "\r", "\\r")
+		s = strings.ReplaceAll(s, "\v", "\\v")
+		s = strings.ReplaceAll(s, "\\", "\\\\")
+		s = strings.ReplaceAll(s, "\"", "\\\"")
+		s = strings.ReplaceAll(s, "\n", "\\n")
 		return fmt.Sprintf("\"%s\"", s)
 	}
 	if expr.Literal.Kind == TRUE {

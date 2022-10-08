@@ -2,6 +2,7 @@ package wall
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/cznic/mathutil"
 )
@@ -366,8 +367,20 @@ func (s *Scanner) num() Token {
 	return s.token(INTEGER)
 }
 
+func escapeChar(c byte) bool {
+	return c == 'a' || c == 'b' || c == 'f' || c == 'n' || c == 'r' || c == 't' || c == 'v' || c == '\\' || c == '"'
+}
+
 func (s *Scanner) string() (Token, error) {
 	for s.next() != '"' && s.next() != 0 {
+		if s.next() == '\\' {
+			s.advance()
+			if !escapeChar(s.next()) {
+				return Token{}, NewError(s.pos, "invalid escape character: %c", s.next())
+			}
+			s.advance()
+			continue
+		}
 		if s.advance() == '\n' {
 			s.pos.Line++
 		}
@@ -378,6 +391,15 @@ func (s *Scanner) string() (Token, error) {
 	s.advance()
 	t := s.token(STRING)
 	t.Content = t.Content[1 : len(t.Content)-1]
+	t.Content = strings.ReplaceAll(t.Content, "\\a", "\a")
+	t.Content = strings.ReplaceAll(t.Content, "\\b", "\b")
+	t.Content = strings.ReplaceAll(t.Content, "\\f", "\f")
+	t.Content = strings.ReplaceAll(t.Content, "\\n", "\n")
+	t.Content = strings.ReplaceAll(t.Content, "\\r", "\r")
+	t.Content = strings.ReplaceAll(t.Content, "\\t", "\t")
+	t.Content = strings.ReplaceAll(t.Content, "\\v", "\v")
+	t.Content = strings.ReplaceAll(t.Content, "\\\"", "\"")
+	t.Content = strings.ReplaceAll(t.Content, "\\\\", "\\")
 	return t, nil
 }
 

@@ -85,6 +85,16 @@ var scannerScanTests = []scannerScanTest{
 	{"0.0", wall.FLOAT, "0.0"},
 	{"a", wall.IDENTIFIER, "a"},
 	{"\"a\"", wall.STRING, "a"},
+	{"\"\\a\"", wall.STRING, "\a"},
+	{"\"\\a\"", wall.STRING, "\a"},
+	{"\"\\b\"", wall.STRING, "\b"},
+	{"\"\\f\"", wall.STRING, "\f"},
+	{"\"\\n\"", wall.STRING, "\n"},
+	{"\"\\r\"", wall.STRING, "\r"},
+	{"\"\\t\"", wall.STRING, "\t"},
+	{"\"\\v\"", wall.STRING, "\v"},
+	{`"\\"`, wall.STRING, "\\"},
+	{`"\""`, wall.STRING, "\""},
 }
 
 func TestScanner_Scan(t *testing.T) {
@@ -93,7 +103,7 @@ func TestScanner_Scan(t *testing.T) {
 		sc := wall.NewScanner("<test>", test.source)
 		tok, err := sc.Scan()
 		assert.NoError(t, err)
-		assert.Equal(t, tok.Kind, test.kind)
-		assert.Equal(t, tok.Content, test.content)
+		assert.Equal(t, test.kind, tok.Kind)
+		assert.Equal(t, test.content, tok.Content)
 	}
 }
