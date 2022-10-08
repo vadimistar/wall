@@ -151,13 +151,13 @@ func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Pa
 					return NewError(def.Typename.Pos, "type is not declared: %s", typename.Token.Content)
 				}
 				checkedMethod := &CheckedMethodDef{
-					Typename:   def.Typename,
+					Typename:   typename.Token,
 					Name:       &def.Id,
 					Params:     checkedParams,
 					ReturnType: returnType,
 					Body:       &CheckedBlock{},
 				}
-				if err := c.GlobalScope.DefineMethod(def.Typename, &def.Id, &FunctionType{
+				if err := c.GlobalScope.DefineMethod(checkedMethod.Typename, checkedMethod.Name, &FunctionType{
 					Params:  paramTypes,
 					Returns: returnType,
 				}); err != nil {

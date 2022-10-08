@@ -272,6 +272,9 @@ func (s ParsedStructInitExpr) pos() Pos {
 	return s.Name.pos()
 }
 func (p ParsedObjectAccessExpr) pos() Pos {
+	if p.Object == nil {
+		return p.Dot.Pos
+	}
 	return p.Object.pos()
 }
 func (p ParsedModuleAccessExpr) pos() Pos {

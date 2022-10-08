@@ -7,6 +7,7 @@ import (
 )
 
 func CodegenCompilationUnit(c *CheckedFile) string {
+	RenameMethods(c)
 	WallPrefixesToGlobalNames(c)
 	var result strings.Builder
 	fmt.Fprintf(&result, "/* source filename: %s */\n", c.Filename)
@@ -101,8 +102,15 @@ func CodegenExpr(expr CheckedExpr, s *Scope) string {
 		return codegenModuleAccessExpr(expr, s)
 	case *CheckedAsExpr:
 		return codegenAsExpr(expr, s)
+	case *CheckedMethodExpr:
+		return codegenMethodExpr(expr, s)
 	}
 	panic("unreachable")
+}
+
+func codegenMethodExpr(expr *CheckedMethodExpr, s *Scope) string {
+	name := strings.ReplaceAll(expr.Method.Content, ".", "_")
+	return name
 }
 
 func codegenAsExpr(expr *CheckedAsExpr, s *Scope) string {
@@ -114,6 +122,9 @@ func codegenModuleAccessExpr(expr *CheckedModuleAccessExpr, s *Scope) string {
 }
 
 func codegenMemberAccessExpr(expr *CheckedMemberAccessExpr, s *Scope) string {
+	if expr.Object == nil {
+		return fmt.Sprintf("_this.%s", expr.Member.Content)
+	}
 	return fmt.Sprintf("%s.%s", CodegenExpr(expr.Object, s), expr.Member.Content)
 }
 
@@ -204,6 +215,12 @@ func codegenCallExpr(expr *CheckedCallExpr, s *Scope) string {
 	var builder strings.Builder
 	builder.WriteString(callee)
 	builder.WriteString("(")
+	if obj := objectFromMethodExpr(expr.Callee); obj != nil {
+		builder.WriteString(CodegenExpr(obj, s))
+		if len(expr.Args) > 0 {
+			builder.WriteString(", ")
+		}
+	}
 	for i, arg := range expr.Args {
 		builder.WriteString(CodegenExpr(arg, s))
 		if i < len(expr.Args)-1 {
@@ -212,6 +229,16 @@ func codegenCallExpr(expr *CheckedCallExpr, s *Scope) string {
 	}
 	builder.WriteString(")")
 	return builder.String()
+}
+
+func objectFromMethodExpr(expr CheckedExpr) CheckedExpr {
+	switch expr := expr.(type) {
+	case *CheckedGroupedExpr:
+		return objectFromMethodExpr(expr.Inner)
+	case *CheckedMethodExpr:
+		return expr.Object
+	}
+	return nil
 }
 
 func CodegenStmt(stmt CheckedStmt, s *Scope) string {
@@ -284,7 +311,11 @@ func codegenFuncDefinitions(c *CheckedFile, checkedFiles map[*CheckedFile]struct
 	checkedFiles[c] = struct{}{}
 	var builder strings.Builder
 	for _, def := range c.Funs {
-		builder.WriteString(codegenFunDef(def, c.GlobalScope))
+		codegenFunDef(&builder, def.Name.Content, def.Params, def.ReturnType, def.Body, c.GlobalScope)
+	}
+	for _, m := range c.Methods {
+		params := appendThisToParams(m.Params, c.GlobalScope.findType(m.Typename.Content).TypeId, c.GlobalScope)
+		codegenFunDef(&builder, strings.ReplaceAll(m.Name.Content, ".", "_"), params, m.ReturnType, m.Body, c.GlobalScope)
 	}
 	for _, imp := range c.Imports {
 		builder.WriteString(codegenFuncDefinitions(imp.File, checkedFiles))
@@ -292,20 +323,19 @@ func codegenFuncDefinitions(c *CheckedFile, checkedFiles map[*CheckedFile]struct
 	return builder.String()
 }
 
-func codegenFunDef(def *CheckedFunDef, s *Scope) string {
-	var builder strings.Builder
-	fmt.Fprintf(&builder, "%s %s(", CodegenType(def.ReturnType, s), def.Name.Content)
-	if len(def.Params) == 0 {
+func codegenFunDef(builder *strings.Builder, name string, params []CheckedFunParam, returnType TypeId, body *CheckedBlock, s *Scope) string {
+	fmt.Fprintf(builder, "%s %s(", CodegenType(returnType, s), name)
+	if len(params) == 0 {
 		builder.WriteString(CodegenType(UNIT_TYPE_ID, s))
 	}
-	for i, param := range def.Params {
-		fmt.Fprintf(&builder, "%s %s", CodegenType(param.Type, s), param.Name.Content)
-		if i < len(def.Params)-1 {
+	for i, param := range params {
+		fmt.Fprintf(builder, "%s %s", CodegenType(param.Type, s), param.Name.Content)
+		if i < len(params)-1 {
 			builder.WriteString(", ")
 		}
 	}
 	builder.WriteString(") ")
-	builder.WriteString(codegenBlock(def.Body, s))
+	builder.WriteString(codegenBlock(body, s))
 	return builder.String()
 }
 
@@ -335,8 +365,36 @@ func wallPrefixesToGlobalNames(c *CheckedFile, checkedFiles map[*CheckedFile]str
 		}
 		def.Name.Content = attachWallPrefix(def.Name.Content)
 	}
+	for _, def := range c.Methods {
+		name := def.Name.Content
+		if !c.GlobalScope.findAndRenameMethod(name, attachWallPrefix(name)) {
+			panic(fmt.Sprintf("fun not found: %s", name))
+		}
+		def.Name.Content = attachWallPrefix(name)
+	}
 	for _, imp := range c.Imports {
 		wallPrefixesToGlobalNames(imp.File, checkedFiles)
+	}
+}
+
+func RenameMethods(c *CheckedFile) {
+	renameMethods(c, make(map[*CheckedFile]struct{}))
+}
+
+func renameMethods(c *CheckedFile, checkedFiles map[*CheckedFile]struct{}) {
+	if _, ok := checkedFiles[c]; ok {
+		return
+	}
+	checkedFiles[c] = struct{}{}
+	for _, def := range c.Methods {
+		name := def.Typename.Content + "." + def.Name.Content
+		if !c.GlobalScope.findAndRenameMethod(name, attachModuleName(name, def.Name.Filename)) {
+			panic(fmt.Sprintf("fun not found: %s", name))
+		}
+		def.Name.Content = attachModuleName(name, def.Name.Filename)
+	}
+	for _, imp := range c.Imports {
+		moduleNamesToGlobalNames(imp.File, checkedFiles)
 	}
 }
 
@@ -365,6 +423,13 @@ func moduleNamesToGlobalNames(c *CheckedFile, checkedFiles map[*CheckedFile]stru
 			panic("type not found")
 		}
 		def.Name.Content = attachModuleName(def.Name.Content, def.Name.Filename)
+	}
+	for _, def := range c.Methods {
+		name := def.Name.Content
+		if !c.GlobalScope.findAndRenameMethod(name, attachModuleName(name, def.Name.Filename)) {
+			panic(fmt.Sprintf("fun not found: %s", name))
+		}
+		def.Name.Content = attachModuleName(name, def.Name.Filename)
 	}
 	for _, imp := range c.Imports {
 		moduleNamesToGlobalNames(imp.File, checkedFiles)
@@ -415,22 +480,38 @@ func codegenFuncDeclarations(c *CheckedFile, checkedFiles map[*CheckedFile]struc
 	checkedFiles[c] = struct{}{}
 	var builder strings.Builder
 	for _, def := range c.Funs {
-		fmt.Fprintf(&builder, "%s %s(", CodegenType(def.ReturnType, c.GlobalScope), string(def.Name.Content))
-		if len(def.Params) == 0 {
-			builder.WriteString(CodegenType(UNIT_TYPE_ID, c.GlobalScope))
-		}
-		for i, param := range def.Params {
-			fmt.Fprintf(&builder, "%s", CodegenType(param.Type, c.GlobalScope))
-			if i < len(def.Params)-1 {
-				builder.WriteString(", ")
-			}
-		}
-		builder.WriteString(");\n")
+		codegenFunDecl(&builder, def.Name.Content, def.Params, def.ReturnType, c)
+	}
+	for _, m := range c.Methods {
+		params := appendThisToParams(m.Params, c.GlobalScope.findType(m.Typename.Content).TypeId, c.GlobalScope)
+		codegenFunDecl(&builder, strings.ReplaceAll(m.Name.Content, ".", "_"), params, m.ReturnType, c)
 	}
 	for _, imp := range c.Imports {
 		builder.WriteString(codegenFuncDeclarations(imp.File, checkedFiles))
 	}
 	return builder.String()
+}
+
+func appendThisToParams(params []CheckedFunParam, thisType TypeId, s *Scope) []CheckedFunParam {
+	thisParam := CheckedFunParam{
+		Name: &Token{Kind: IDENTIFIER, Content: "_this"},
+		Type: thisType,
+	}
+	return append([]CheckedFunParam{thisParam}, params...)
+}
+
+func codegenFunDecl(builder *strings.Builder, name string, params []CheckedFunParam, returnType TypeId, c *CheckedFile) {
+	fmt.Fprintf(builder, "%s %s(", CodegenType(returnType, c.GlobalScope), name)
+	if len(params) == 0 {
+		builder.WriteString(CodegenType(UNIT_TYPE_ID, c.GlobalScope))
+	}
+	for i, param := range params {
+		fmt.Fprintf(builder, "%s", CodegenType(param.Type, c.GlobalScope))
+		if i < len(params)-1 {
+			builder.WriteString(", ")
+		}
+	}
+	builder.WriteString(");\n")
 }
 
 func codegenTypeDefinitions(c *CheckedFile, checkedFiles map[*CheckedFile]struct{}) string {
