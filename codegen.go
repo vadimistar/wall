@@ -394,7 +394,7 @@ func renameMethods(c *CheckedFile, checkedFiles map[*CheckedFile]struct{}) {
 		def.Name.Content = attachModuleName(name, def.Name.Filename)
 	}
 	for _, imp := range c.Imports {
-		moduleNamesToGlobalNames(imp.File, checkedFiles)
+		renameMethods(imp.File, checkedFiles)
 	}
 }
 
