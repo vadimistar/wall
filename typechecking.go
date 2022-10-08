@@ -645,7 +645,7 @@ func checkObjectAccessExpr(p *ParsedObjectAccessExpr, s *Scope) (CheckedExpr, er
 	if !isStructType {
 		return nil, NewError(p.pos(), "can't use . operator: expected struct type, but got %s", s.TypeToString(typ))
 	}
-	method := s.findMethod(s.TypeToString(typ), p.Member.Content)
+	method := s.findMethod(s.TypeToString(typ), p.Member.Content, make(map[string]struct{}))
 	if method != nil {
 		return &CheckedMethodExpr{
 			Object: object,
@@ -1164,7 +1164,7 @@ func (s *Scope) DefineFunction(token *Token, typ *FunctionType) error {
 }
 
 func (s *Scope) DefineMethod(typename *Token, id *Token, typ *FunctionType) error {
-	if s.findMethod(typename.Content, id.Content) != nil {
+	if s.findMethod(typename.Content, id.Content, make(map[string]struct{})) != nil {
 		return NewError(id.Pos, "method %s for type %s is already declared", id.Content, typename.Content)
 	}
 	s.Methods[typename.Content+"."+id.Content] = &MethodName{
@@ -1187,12 +1187,21 @@ func (s *Scope) DefineVar(token *Token, typ TypeId, mutable bool) error {
 	return nil
 }
 
-func (s *Scope) findMethod(typename string, name string) *MethodName {
+func (s *Scope) findMethod(typename string, name string, checkedFiles map[string]struct{}) *MethodName {
+	if _, checked := checkedFiles[s.File.Filename]; checked {
+		return nil
+	}
+	checkedFiles[s.File.Filename] = struct{}{}
+	for s.Parent != nil {
+		s = s.Parent
+	}
 	if f, ok := s.Methods[typename+"."+name]; ok {
 		return f
 	}
-	if s.Parent != nil {
-		return s.Parent.findMethod(typename, name)
+	for _, imp := range s.File.Imports {
+		if m := imp.File.GlobalScope.findMethod(typename, name, checkedFiles); m != nil {
+			return m
+		}
 	}
 	return nil
 }
