@@ -1,6 +1,8 @@
 package wall
 
-import "strings"
+import (
+	"strings"
+)
 
 func LowerExternFunctions(c *CheckedFile) {
 	lowerExternFunctions(c, make(map[*CheckedFile]struct{}))

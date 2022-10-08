@@ -166,6 +166,13 @@ func (p *Parser) ParseDef() (ParsedDef, error) {
 		return nil, NewError(p.next().Pos, "expected FUN, but got %s", p.next().Kind)
 	case FUN:
 		fun := p.advance()
+		var typename, dot *Token
+		if p.peek(1).Kind == DOT {
+			typenameT := p.advance()
+			dotT := p.advance()
+			typename = &typenameT
+			dot = &dotT
+		}
 		id, err := p.match(IDENTIFIER)
 		if err != nil {
 			return nil, err
@@ -187,6 +194,8 @@ func (p *Parser) ParseDef() (ParsedDef, error) {
 		}
 		return &ParsedFunDef{
 			Fun:        fun,
+			Typename:   typename,
+			Dot:        dot,
 			Id:         id,
 			Params:     params,
 			ReturnType: returnType,
@@ -506,6 +515,8 @@ func (p *Parser) parsePrimary() (expr ParsedExpr, err error) {
 				Inner: inner,
 				Right: right,
 			}
+		case DOT:
+			break
 		default:
 			return nil, NewError(p.next().Pos, "expected a primary expression, but got %s", p.next().Kind)
 		}

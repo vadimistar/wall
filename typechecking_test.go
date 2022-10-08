@@ -1066,3 +1066,86 @@ func TestCheckTypealiasDef(t *testing.T) {
 		assert.Equal(t, wall.INT_TYPE_ID, checkedFile.GlobalScope.Types["a"].TypeId)
 	}
 }
+
+func TestCheckMethodDefAndSelfExpr(t *testing.T) {
+	file := &wall.ParsedFile{
+		Defs: []wall.ParsedDef{
+			&wall.ParsedStructDef{
+				Name: wall.Token{Kind: wall.IDENTIFIER, Content: "Square"},
+				Fields: []wall.ParsedStructField{
+					{
+						Name: wall.Token{Kind: wall.IDENTIFIER, Content: "size"},
+						Type: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int32"}},
+					},
+				},
+			},
+			&wall.ParsedFunDef{
+				Typename:   &wall.Token{Kind: wall.IDENTIFIER, Content: "Square"},
+				Dot:        &wall.Token{Kind: wall.DOT},
+				Id:         wall.Token{Kind: wall.IDENTIFIER, Content: "area"},
+				Params:     []wall.ParsedFunParam{},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int32"}},
+				Body: &wall.ParsedBlock{
+					Stmts: []wall.ParsedStmt{
+						&wall.ParsedReturn{
+							Arg: &wall.ParsedBinaryExpr{
+								Left: &wall.ParsedObjectAccessExpr{
+									Object: nil,
+									Dot:    wall.Token{Kind: wall.DOT},
+									Member: wall.Token{Kind: wall.IDENTIFIER, Content: "size"},
+								},
+								Op: wall.Token{Kind: wall.STAR},
+								Right: &wall.ParsedObjectAccessExpr{
+									Object: nil,
+									Dot:    wall.Token{Kind: wall.DOT},
+									Member: wall.Token{Kind: wall.IDENTIFIER, Content: "size"},
+								},
+							},
+						},
+					},
+				},
+			},
+			&wall.ParsedFunDef{
+				Id:         wall.Token{Kind: wall.IDENTIFIER, Content: "main"},
+				Params:     []wall.ParsedFunParam{},
+				ReturnType: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "int32"}},
+				Body: &wall.ParsedBlock{
+					Stmts: []wall.ParsedStmt{
+						&wall.ParsedVar{
+							Id:      wall.Token{Kind: wall.IDENTIFIER, Content: "s"},
+							ColonEq: wall.Token{Kind: wall.COLONEQ},
+							Value: &wall.ParsedStructInitExpr{
+								Name: &wall.ParsedIdType{Token: wall.Token{Kind: wall.IDENTIFIER, Content: "Square"}},
+								Fields: []wall.ParsedStructInitField{
+									{
+										Name: wall.Token{Kind: wall.IDENTIFIER, Content: "size"},
+										Value: &wall.ParsedLiteralExpr{
+											Token: wall.Token{Kind: wall.INTEGER, Content: "10"},
+										},
+									},
+								},
+							},
+						},
+						&wall.ParsedReturn{
+							Arg: &wall.ParsedCallExpr{
+								Callee: &wall.ParsedObjectAccessExpr{
+									Object: &wall.ParsedIdExpr{
+										Token: wall.Token{Kind: wall.IDENTIFIER, Content: "s"},
+									},
+									Dot:    wall.Token{Kind: wall.DOT},
+									Member: wall.Token{Kind: wall.IDENTIFIER, Content: "area"},
+								},
+								Args: []wall.ParsedExpr{},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	checkedFile := wall.NewCheckedCompilationUnit("")
+	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
+	assert.NoError(t, wall.CheckFunctionSignatures(file, checkedFile))
+	assert.NoError(t, wall.CheckTypeContents(file, checkedFile))
+	assert.NoError(t, wall.CheckBlocks(file, checkedFile))
+}

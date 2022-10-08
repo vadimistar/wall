@@ -509,6 +509,28 @@ var parseFunDefTests = []parseFunDefTest{
 			Right: wall.Token{Kind: wall.RIGHTBRACE},
 		},
 	}},
+	{[]wall.Token{
+		{Kind: wall.FUN},
+		{Kind: wall.IDENTIFIER, Content: "A"},
+		{Kind: wall.DOT},
+		{Kind: wall.IDENTIFIER, Content: "main"},
+		{Kind: wall.LEFTPAREN},
+		{Kind: wall.RIGHTPAREN},
+		{Kind: wall.LEFTBRACE},
+		{Kind: wall.RIGHTBRACE},
+	}, &wall.ParsedFunDef{
+		Fun:        wall.Token{Kind: wall.FUN},
+		Typename:   &wall.Token{Kind: wall.IDENTIFIER, Content: "A"},
+		Dot:        &wall.Token{Kind: wall.DOT},
+		Id:         wall.Token{Kind: wall.IDENTIFIER, Content: "main"},
+		Params:     []wall.ParsedFunParam{},
+		ReturnType: nil,
+		Body: &wall.ParsedBlock{
+			Left:  wall.Token{Kind: wall.LEFTBRACE},
+			Stmts: []wall.ParsedStmt{},
+			Right: wall.Token{Kind: wall.RIGHTBRACE},
+		},
+	}},
 }
 
 func TestParseFunDef(t *testing.T) {
@@ -723,6 +745,18 @@ func TestParseTypealiasDef(t *testing.T) {
 			Type: &wall.ParsedIdType{
 				Token: wall.Token{Kind: wall.IDENTIFIER},
 			},
+		}, got)
+	}
+}
+
+func TestParseThisExpr(t *testing.T) {
+	pr := wall.NewParser([]wall.Token{{Kind: wall.DOT}, {Kind: wall.IDENTIFIER}})
+	got, err := pr.ParseExprAndEof()
+	if assert.NoError(t, err) {
+		assert.Equal(t, &wall.ParsedObjectAccessExpr{
+			Object: nil,
+			Dot:    wall.Token{Kind: wall.DOT},
+			Member: wall.Token{Kind: wall.IDENTIFIER},
 		}, got)
 	}
 }

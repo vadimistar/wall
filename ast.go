@@ -23,6 +23,8 @@ type ParsedDef interface {
 
 type ParsedFunDef struct {
 	Fun        Token
+	Typename   *Token
+	Dot        *Token
 	Id         Token
 	Params     []ParsedFunParam
 	ReturnType ParsedType

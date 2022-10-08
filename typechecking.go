@@ -145,6 +145,27 @@ func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Pa
 					return err
 				}
 			}
+			if def.Typename != nil {
+				typename := c.GlobalScope.findType(def.Typename.Content)
+				if typename == nil {
+					return NewError(def.Typename.Pos, "type is not declared: %s", typename.Token.Content)
+				}
+				checkedMethod := &CheckedMethodDef{
+					Typename:   def.Typename,
+					Name:       &def.Id,
+					Params:     checkedParams,
+					ReturnType: returnType,
+					Body:       &CheckedBlock{},
+				}
+				if err := c.GlobalScope.DefineMethod(def.Typename, &def.Id, &FunctionType{
+					Params:  paramTypes,
+					Returns: returnType,
+				}); err != nil {
+					return err
+				}
+				c.Methods = append(c.Methods, checkedMethod)
+				break
+			}
 			if def.Id.Content == "main" && c == mainFile {
 				if err := validateMain(def.pos(), paramTypes, returnType, c); err != nil {
 					return err
@@ -296,8 +317,41 @@ func checkBlocks(p *ParsedFile, c *CheckedFile, checkedFiles map[*ParsedFile]str
 					}
 				}
 			}
+			for _, m := range c.Methods {
+				if m.Name.Content == def.Id.Content {
+					if err := checkMethodBlock(def, m, c.GlobalScope, c.GlobalScope.findType(m.Typename.Content).TypeId); err != nil {
+						return err
+					}
+				}
+			}
 		}
 	}
+	return nil
+}
+
+func checkMethodBlock(p *ParsedFunDef, c *CheckedMethodDef, s *Scope, thisType TypeId) error {
+	s = NewScope(s)
+	s.MethodType = thisType
+	for _, param := range c.Params {
+		if err := s.DefineVar(param.Name, param.Type, false); err != nil {
+			return err
+		}
+	}
+	returns := UNIT_TYPE_ID
+	if p.ReturnType != nil {
+		var err error
+		returns, err = checkType(p.ReturnType, s)
+		if err != nil {
+			return err
+		}
+	}
+	block, err := checkBlock(p.Body, s, &MustReturn{
+		Type: returns,
+	})
+	if err != nil {
+		return err
+	}
+	c.Body = block
 	return nil
 }
 
@@ -574,14 +628,30 @@ func checkModuleAccessExpr(p *ParsedModuleAccessExpr, s *Scope) (*CheckedModuleA
 	}, nil
 }
 
-func checkObjectAccessExpr(p *ParsedObjectAccessExpr, s *Scope) (*CheckedMemberAccessExpr, error) {
-	object, err := CheckExpr(p.Object, s)
-	if err != nil {
-		return nil, err
+func checkObjectAccessExpr(p *ParsedObjectAccessExpr, s *Scope) (CheckedExpr, error) {
+	var typ TypeId
+	var object CheckedExpr
+	if p.Object == nil {
+		typ = s.MethodType
+	} else {
+		var err error
+		object, err = CheckExpr(p.Object, s)
+		if err != nil {
+			return nil, err
+		}
+		typ = object.TypeId()
 	}
-	structType, isStructType := (*s.File.Types)[object.TypeId()].(*StructType)
+	structType, isStructType := (*s.File.Types)[typ].(*StructType)
 	if !isStructType {
-		return nil, NewError(p.pos(), "can't use . operator: expected struct type, but got %s", s.TypeToString(object.TypeId()))
+		return nil, NewError(p.pos(), "can't use . operator: expected struct type, but got %s", s.TypeToString(typ))
+	}
+	method := s.findMethod(s.TypeToString(typ), p.Member.Content)
+	if method != nil {
+		return &CheckedMethodExpr{
+			Object: object,
+			Method: method.Id,
+			Type:   method.TypeId,
+		}, nil
 	}
 	fieldType, fieldExists := structType.Fields[string(p.Member.Content)]
 	if !fieldExists {
@@ -1013,14 +1083,22 @@ type TypeName struct {
 	TypeId
 }
 
+type MethodName struct {
+	Typename *Token
+	Id       *Token
+	TypeId
+}
+
 type Scope struct {
-	Parent   *Scope
-	Children []*Scope
-	File     *CheckedFile
-	Types    map[string]*TypeName
-	Funs     map[string]*Name
-	Vars     map[string]*Name
-	Imports  map[string]ImportId
+	Parent     *Scope
+	Children   []*Scope
+	File       *CheckedFile
+	Types      map[string]*TypeName
+	Funs       map[string]*Name
+	Methods    map[string]*MethodName
+	Vars       map[string]*Name
+	Imports    map[string]ImportId
+	MethodType TypeId
 }
 
 func NewScope(parent *Scope) *Scope {
@@ -1029,11 +1107,13 @@ func NewScope(parent *Scope) *Scope {
 		Children: make([]*Scope, 0),
 		Types:    make(map[string]*TypeName),
 		Funs:     make(map[string]*Name),
+		Methods:  make(map[string]*MethodName),
 		Vars:     make(map[string]*Name),
 		Imports:  make(map[string]ImportId),
 	}
 	if parent != nil {
 		s.File = parent.File
+		s.MethodType = parent.MethodType
 		parent.Children = append(parent.Children, s)
 	}
 	return s
@@ -1083,6 +1163,18 @@ func (s *Scope) DefineFunction(token *Token, typ *FunctionType) error {
 	return nil
 }
 
+func (s *Scope) DefineMethod(typename *Token, id *Token, typ *FunctionType) error {
+	if s.findMethod(typename.Content, id.Content) != nil {
+		return NewError(id.Pos, "method %s for type %s is already declared", id.Content, typename.Content)
+	}
+	s.Methods[typename.Content+"."+id.Content] = &MethodName{
+		Typename: typename,
+		Id:       id,
+		TypeId:   s.File.TypeId(typ),
+	}
+	return nil
+}
+
 func (s *Scope) DefineVar(token *Token, typ TypeId, mutable bool) error {
 	if s.findName(string(token.Content)) != nil {
 		return NewError(token.Pos, "%s is already declared", token.Content)
@@ -1091,6 +1183,16 @@ func (s *Scope) DefineVar(token *Token, typ TypeId, mutable bool) error {
 		Token:   token,
 		TypeId:  typ,
 		Mutable: mutable,
+	}
+	return nil
+}
+
+func (s *Scope) findMethod(typename string, name string) *MethodName {
+	if f, ok := s.Methods[typename+"."+name]; ok {
+		return f
+	}
+	if s.Parent != nil {
+		return s.Parent.findMethod(typename, name)
 	}
 	return nil
 }
@@ -1216,6 +1318,20 @@ func (s *Scope) findAndRenameFun(name string, newName string) bool {
 	return false
 }
 
+func (s *Scope) findAndRenameMethod(name string, newName string) bool {
+	if t, ok := s.Methods[name]; ok {
+		delete(s.Methods, name)
+		s.Methods[newName] = t
+		return true
+	}
+	for _, child := range s.Children {
+		if child.findAndRenameMethod(name, newName) {
+			return true
+		}
+	}
+	return false
+}
+
 type ImportId int
 
 const IMPORT_NOT_FOUND ImportId = -1
@@ -1224,6 +1340,7 @@ type CheckedFile struct {
 	Filename    string
 	Imports     []*CheckedImport
 	Funs        []*CheckedFunDef
+	Methods     []*CheckedMethodDef
 	ExternFuns  []*CheckedExternFunDef
 	Structs     []*CheckedStructDef
 	Typealiases []*CheckedTypealiasDef
@@ -1237,6 +1354,7 @@ func NewCheckedCompilationUnit(filename string) *CheckedFile {
 		Filename:    filename,
 		Imports:     make([]*CheckedImport, 0),
 		Funs:        make([]*CheckedFunDef, 0),
+		Methods:     make([]*CheckedMethodDef, 0),
 		Structs:     make([]*CheckedStructDef, 0),
 		Types:       types,
 		GlobalScope: NewScope(nil),
@@ -1322,6 +1440,14 @@ type CheckedImport struct {
 }
 
 type CheckedFunDef struct {
+	Name       *Token
+	Params     []CheckedFunParam
+	ReturnType TypeId
+	Body       *CheckedBlock
+}
+
+type CheckedMethodDef struct {
+	Typename   *Token
 	Name       *Token
 	Params     []CheckedFunParam
 	ReturnType TypeId
@@ -1503,6 +1629,12 @@ type CheckedAsExpr struct {
 	Type  TypeId
 }
 
+type CheckedMethodExpr struct {
+	Object CheckedExpr
+	Method *Token
+	Type   TypeId
+}
+
 func (c *CheckedUnaryExpr) checkedExpr()        {}
 func (c *CheckedBinaryExpr) checkedExpr()       {}
 func (c *CheckedGroupedExpr) checkedExpr()      {}
@@ -1513,6 +1645,7 @@ func (c *CheckedStructInitExpr) checkedExpr()   {}
 func (c *CheckedMemberAccessExpr) checkedExpr() {}
 func (c *CheckedModuleAccessExpr) checkedExpr() {}
 func (c *CheckedAsExpr) checkedExpr()           {}
+func (c *CheckedMethodExpr) checkedExpr()       {}
 
 func (c *CheckedUnaryExpr) TypeId() TypeId {
 	return c.Type
@@ -1542,6 +1675,9 @@ func (c *CheckedModuleAccessExpr) TypeId() TypeId {
 	return c.Type
 }
 func (c *CheckedAsExpr) TypeId() TypeId {
+	return c.Type
+}
+func (c *CheckedMethodExpr) TypeId() TypeId {
 	return c.Type
 }
 
