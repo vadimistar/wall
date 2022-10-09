@@ -1286,6 +1286,8 @@ func (s *Scope) TypeToString(typeId TypeId) string {
 		return "*" + s.TypeToString(t.Type)
 	case *FunctionType:
 		return fmt.Sprintf("fun (%s) %s", strings.Join(s.typesToStrings(t.Params), ", "), s.TypeToString(t.Returns))
+	case *MethodType:
+		return fmt.Sprintf("fun %s._(%s) %s", s.TypeToString(t.This), strings.Join(s.typesToStrings(t.Params), ", "), s.TypeToString(t.Returns))
 	}
 	return ""
 }
