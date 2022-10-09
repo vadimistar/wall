@@ -157,7 +157,8 @@ func checkFunctionSignatures(p *ParsedFile, c *CheckedFile, checkedFiles map[*Pa
 					ReturnType: returnType,
 					Body:       &CheckedBlock{},
 				}
-				if err := c.GlobalScope.DefineMethod(checkedMethod.Typename, checkedMethod.Name, &FunctionType{
+				if err := c.GlobalScope.DefineMethod(checkedMethod.Typename, checkedMethod.Name, &MethodType{
+					This:    typename.TypeId,
 					Params:  paramTypes,
 					Returns: returnType,
 				}); err != nil {
@@ -749,7 +750,29 @@ func checkCallExpr(p *ParsedCallExpr, s *Scope) (*CheckedCallExpr, error) {
 			Type:   funType.Returns,
 		}, nil
 	}
-	return nil, NewError(p.pos(), "callee is not of a function: %s", s.TypeToString(callee.TypeId()))
+	if metType, ok := (*s.File.Types)[callee.TypeId()].(*MethodType); ok {
+		args := make([]CheckedExpr, 0, len(p.Args))
+		for _, arg := range p.Args {
+			checkedArg, err := CheckExpr(arg, s)
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, checkedArg)
+		}
+		argsTypes := make([]TypeId, 0, len(p.Args))
+		for _, arg := range args {
+			argsTypes = append(argsTypes, arg.TypeId())
+		}
+		if !reflect.DeepEqual(metType.Params, argsTypes) {
+			return nil, NewError(p.pos(), "expected args %s, but got %s", s.typesToStrings(metType.Params), s.typesToStrings(argsTypes))
+		}
+		return &CheckedCallExpr{
+			Callee: callee,
+			Args:   args,
+			Type:   metType.Returns,
+		}, nil
+	}
+	return nil, NewError(p.pos(), "callee is not a function: %s", s.TypeToString(callee.TypeId()))
 }
 
 func (s *Scope) typesToStrings(types []TypeId) (res []string) {
@@ -1161,7 +1184,7 @@ func (s *Scope) DefineFunction(token *Token, typ *FunctionType) error {
 	return nil
 }
 
-func (s *Scope) DefineMethod(typename *Token, id *Token, typ *FunctionType) error {
+func (s *Scope) DefineMethod(typename *Token, id *Token, typ *MethodType) error {
 	if s.findMethod(typename.Content, id.Content, make(map[string]struct{})) != nil {
 		return NewError(id.Pos, "method %s for type %s is already declared", id.Content, typename.Content)
 	}
@@ -1713,7 +1736,14 @@ type FunctionType struct {
 	Returns TypeId
 }
 
+type MethodType struct {
+	This    TypeId
+	Params  []TypeId
+	Returns TypeId
+}
+
 func (b *BuildinType) typ()  {}
 func (p *PointerType) typ()  {}
 func (s *StructType) typ()   {}
 func (f *FunctionType) typ() {}
+func (m *MethodType) typ()   {}

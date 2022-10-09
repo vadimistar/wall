@@ -48,6 +48,20 @@ func codegenFuncTypedefs(c *CheckedFile, checkedFiles map[*CheckedFile]struct{})
 			}
 			builder.WriteString(");\n")
 		}
+		if typ, ok := typ.(*MethodType); ok {
+			fmt.Fprintf(&builder, "typedef %s (*%s)(", CodegenType(typ.Returns, c.GlobalScope), cFuncTypeId(i, c.Filename))
+			builder.WriteString(CodegenType(typ.This, c.GlobalScope))
+			if len(typ.Params) > 0 {
+				builder.WriteString(", ")
+			}
+			for i, param := range typ.Params {
+				builder.WriteString(CodegenType(param, c.GlobalScope))
+				if i < len(typ.Params)-1 {
+					builder.WriteString(", ")
+				}
+			}
+			builder.WriteString(");\n")
+		}
 	}
 	return builder.String()
 }
@@ -584,6 +598,8 @@ func CodegenType(id TypeId, s *Scope) string {
 	case *PointerType:
 		return CodegenType(t.Type, s) + "*"
 	case *FunctionType:
+		return cFuncTypeId(int(id), s.File.Filename)
+	case *MethodType:
 		return cFuncTypeId(int(id), s.File.Filename)
 	}
 	panic("unreachable")
