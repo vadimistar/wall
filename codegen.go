@@ -579,7 +579,7 @@ func CodegenType(id TypeId, s *Scope) string {
 		default:
 			panic("unreachable")
 		}
-	case *IdType, *StructType:
+	case *StructType:
 		return s.TypeToString(id)
 	case *PointerType:
 		return CodegenType(t.Type, s) + "*"

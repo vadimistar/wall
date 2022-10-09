@@ -1132,10 +1132,9 @@ func (s *Scope) DefineType(token *Token, typ Type) error {
 	if s.findType(string(token.Content)) != nil {
 		return NewError(token.Pos, "type %s is already defined", token.Content)
 	}
-	*s.File.Types = append((*s.File.Types), typ)
 	s.Types[string(token.Content)] = &TypeName{
 		Token:  token,
-		TypeId: TypeId(len((*s.File.Types)) - 1),
+		TypeId: s.File.TypeId(typ),
 	}
 	return nil
 }
@@ -1257,7 +1256,7 @@ func (s *Scope) findType(name string) *TypeName {
 
 func (s *Scope) TypeToString(typeId TypeId) string {
 	switch t := (*s.File.Types)[typeId].(type) {
-	case *BuildinType, *IdType, *StructType:
+	case *BuildinType, *StructType:
 		res := findIdTypeInFile(typeId, s.File, make(map[*CheckedFile]struct{}))
 		return res
 	case *PointerType:
@@ -1358,17 +1357,7 @@ type CheckedFile struct {
 
 func NewCheckedCompilationUnit(filename string) *CheckedFile {
 	types := &[]Type{}
-	c := &CheckedFile{
-		Filename:    filename,
-		Imports:     make([]*CheckedImport, 0),
-		Funs:        make([]*CheckedFunDef, 0),
-		Methods:     make([]*CheckedMethodDef, 0),
-		Structs:     make([]*CheckedStructDef, 0),
-		Types:       types,
-		GlobalScope: NewScope(nil),
-	}
-	c.GlobalScope.File = c
-	return c
+	return NewCheckedFile(filename, types)
 }
 
 func NewCheckedFile(filename string, types *[]Type) *CheckedFile {
@@ -1381,26 +1370,21 @@ func NewCheckedFile(filename string, types *[]Type) *CheckedFile {
 		GlobalScope: NewScope(nil),
 	}
 	c.GlobalScope.File = c
-	c.GlobalScope.DefineType(&Token{Content: "()"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "int"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "int8"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "int16"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "int32"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "int64"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "uint"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "uint8"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "uint16"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "uint32"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "uint64"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "float32"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "float64"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "char"}, &BuildinType{})
-	c.GlobalScope.DefineType(&Token{Content: "bool"}, &BuildinType{})
-	defineInlineC(c)
-	return c
-}
-
-func defineInlineC(c *CheckedFile) {
+	c.GlobalScope.DefineType(&Token{Content: "()"}, &BuildinType{TypeId: UNIT_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "int"}, &BuildinType{TypeId: INT_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "int8"}, &BuildinType{TypeId: INT8_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "int16"}, &BuildinType{TypeId: INT16_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "int32"}, &BuildinType{TypeId: INT32_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "int64"}, &BuildinType{TypeId: INT64_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "uint"}, &BuildinType{TypeId: UINT_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "uint8"}, &BuildinType{TypeId: UINT8_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "uint16"}, &BuildinType{TypeId: UINT16_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "uint32"}, &BuildinType{TypeId: UINT32_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "uint64"}, &BuildinType{TypeId: UINT64_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "float32"}, &BuildinType{TypeId: FLOAT32_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "float64"}, &BuildinType{TypeId: FLOAT64_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "char"}, &BuildinType{TypeId: CHAR_TYPE_ID})
+	c.GlobalScope.DefineType(&Token{Content: "bool"}, &BuildinType{TypeId: BOOL_TYPE_ID})
 	constChar := c.TypeId(&PointerType{
 		Type: CHAR_TYPE_ID,
 	})
@@ -1408,6 +1392,7 @@ func defineInlineC(c *CheckedFile) {
 		Params:  []TypeId{constChar},
 		Returns: UNIT_TYPE_ID,
 	})
+	return c
 }
 
 func panicIf(b bool) {
@@ -1700,10 +1685,8 @@ type Type interface {
 	typ()
 }
 
-type BuildinType struct{}
-
-type IdType struct {
-	Id string
+type BuildinType struct {
+	TypeId
 }
 
 type PointerType struct {
@@ -1726,7 +1709,6 @@ type FunctionType struct {
 }
 
 func (b *BuildinType) typ()  {}
-func (i *IdType) typ()       {}
 func (p *PointerType) typ()  {}
 func (s *StructType) typ()   {}
 func (f *FunctionType) typ() {}
