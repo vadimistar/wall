@@ -49,9 +49,6 @@ func codegenFuncTypedefs(c *CheckedFile, checkedFiles map[*CheckedFile]struct{})
 			builder.WriteString(");\n")
 		}
 	}
-	for _, imp := range c.Imports {
-		builder.WriteString(codegenFuncTypedefs(imp.File, checkedFiles))
-	}
 	return builder.String()
 }
 
