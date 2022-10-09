@@ -45,7 +45,10 @@ func TestCheckTypeSignatures(t *testing.T) {
 	checkedFile := wall.NewCheckedCompilationUnit("")
 	assert.NoError(t, wall.CheckTypeSignatures(file, checkedFile))
 	typ := (*checkedFile.Types)[checkedFile.GlobalScope.Types["a"].TypeId]
-	assert.Equal(t, typ, wall.NewStructType())
+	assert.Equal(t, &wall.StructType{
+		Fields:   map[string]wall.TypeId{},
+		StructId: 0,
+	}, typ)
 	assert.Equal(t, len(checkedFile.Structs), 1)
 }
 

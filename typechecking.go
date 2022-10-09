@@ -1694,12 +1694,17 @@ type PointerType struct {
 }
 
 type StructType struct {
-	Fields map[string]TypeId
+	Fields   map[string]TypeId
+	StructId int
 }
 
+var structTypesCreated int = 0
+
 func NewStructType() *StructType {
+	structTypesCreated++
 	return &StructType{
-		Fields: make(map[string]TypeId),
+		Fields:   make(map[string]TypeId),
+		StructId: structTypesCreated - 1,
 	}
 }
 
