@@ -1155,10 +1155,9 @@ func (s *Scope) DefineFunction(token *Token, typ *FunctionType) error {
 	if s.findName(string(token.Content)) != nil {
 		return NewError(token.Pos, "%s is already declared", token.Content)
 	}
-	(*s.File.Types) = append((*s.File.Types), typ)
 	s.Funs[string(token.Content)] = &Name{
 		Token:  token,
-		TypeId: TypeId(len((*s.File.Types)) - 1),
+		TypeId: s.File.TypeId(typ),
 	}
 	return nil
 }
@@ -1266,7 +1265,7 @@ func (s *Scope) TypeToString(typeId TypeId) string {
 	case *FunctionType:
 		return fmt.Sprintf("fun (%s) %s", strings.Join(s.typesToStrings(t.Params), ", "), s.TypeToString(t.Returns))
 	}
-	panic("unreachable")
+	return ""
 }
 
 func findIdTypeInFile(typeId TypeId, f *CheckedFile, checked map[*CheckedFile]struct{}) string {
@@ -1282,7 +1281,7 @@ func findIdTypeInFile(typeId TypeId, f *CheckedFile, checked map[*CheckedFile]st
 			return found
 		}
 	}
-	panic("unreachable")
+	return ""
 }
 
 func findIdTypeInScope(typeId TypeId, s *Scope) string {
@@ -1369,37 +1368,6 @@ func NewCheckedCompilationUnit(filename string) *CheckedFile {
 		GlobalScope: NewScope(nil),
 	}
 	c.GlobalScope.File = c
-	panicIf(len(*c.Types) != int(UNIT_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "()"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(INT_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "int"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(INT8_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "int8"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(INT16_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "int16"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(INT32_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "int32"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(INT64_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "int64"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(UINT_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "uint"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(UINT8_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "uint8"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(UINT16_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "uint16"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(UINT32_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "uint32"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(UINT64_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "uint64"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(FLOAT32_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "float32"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(FLOAT64_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "float64"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(CHAR_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "char"}, &BuildinType{})
-	panicIf(len(*c.Types) != int(BOOL_TYPE_ID))
-	c.GlobalScope.DefineType(&Token{Content: "bool"}, &BuildinType{})
-	defineInlineC(c)
 	return c
 }
 
@@ -1413,6 +1381,21 @@ func NewCheckedFile(filename string, types *[]Type) *CheckedFile {
 		GlobalScope: NewScope(nil),
 	}
 	c.GlobalScope.File = c
+	c.GlobalScope.DefineType(&Token{Content: "()"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "int"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "int8"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "int16"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "int32"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "int64"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "uint"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "uint8"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "uint16"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "uint32"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "uint64"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "float32"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "float64"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "char"}, &BuildinType{})
+	c.GlobalScope.DefineType(&Token{Content: "bool"}, &BuildinType{})
 	defineInlineC(c)
 	return c
 }
